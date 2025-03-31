@@ -4,7 +4,7 @@ import re
 from storage import Storage
 
 class ShoppingList:
-    """Class to manage shopping lists for different users."""
+    """Class to manage shopping lists for different users and groups."""
     
     def __init__(self):
         """Initialize the shopping list manager."""
@@ -13,12 +13,12 @@ class ShoppingList:
         
         # Convert old format to new format if needed
         self.lists = {}
-        for user_id, items in lists_data.items():
+        for id_key, items in lists_data.items():
             if isinstance(items, list):
                 # Convert old format (list of strings) to new format (list of dicts)
-                self.lists[user_id] = [{"name": item, "quantity": "1"} for item in items]
+                self.lists[id_key] = [{"name": item, "quantity": "1"} for item in items]
             else:
-                self.lists[user_id] = items
+                self.lists[id_key] = items
         
         # Ripulisci i dati corrotti
         self._repair_corrupted_data()
@@ -26,6 +26,27 @@ class ShoppingList:
         # Save the converted data
         if self.lists and self.lists != lists_data:
             self.storage.save(self.lists)
+            
+    def _get_list_id(self, chat_id, user_id=None):
+        """
+        Determine the correct ID to use for the shopping list.
+        For groups (negative chat_id), use the chat_id.
+        For private chats, use the user_id.
+        
+        Args:
+            chat_id: The Telegram chat ID
+            user_id: The Telegram user ID (optional, used for private chats)
+            
+        Returns:
+            A string ID to use as the list identifier
+        """
+        # In Telegram, group IDs are negative numbers
+        if chat_id < 0:
+            # This is a group chat, use chat_id as list identifier
+            return f"group_{abs(chat_id)}"
+        else:
+            # This is a private chat, use user_id as list identifier
+            return f"user_{user_id if user_id else chat_id}"
     
     def _extract_real_name(self, name_dict):
         """
@@ -170,21 +191,22 @@ class ShoppingList:
         # Se non viene trovata nessuna corrispondenza, restituisci "Altro"
         return "Altro"
     
-    def add_item(self, user_id, item_text):
+    def add_item(self, chat_id, item_text, user_id=None):
         """
-        Add an item to a user's shopping list with optional quantity.
+        Add an item to a shopping list with optional quantity.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
             item_text: The item to add, with optional quantity (e.g. "2 kg di patate")
+            user_id: The telegram user ID (optional, used for private chats)
             
         Returns:
             A tuple (success, item_name, quantity, category) where success is a boolean,
             item_name is the name of the item, quantity is the quantity string, and category is the item category
         """
-        user_id = str(user_id)
-        if user_id not in self.lists:
-            self.lists[user_id] = []
+        list_id = self._get_list_id(chat_id, user_id)
+        if list_id not in self.lists:
+            self.lists[list_id] = []
         
         # Parse quantity from the item text
         # Common Italian quantity patterns: "2 kg di patate", "3 patate", "patate (2kg)"
@@ -228,7 +250,7 @@ class ShoppingList:
         
         # Check if the item already exists
         item_exists = False
-        for i, existing_item in enumerate(self.lists[user_id]):
+        for i, existing_item in enumerate(self.lists[list_id]):
             # Verifica se l'elemento esiste già, gestendo sia il caso di "name" che è una stringa,
             # sia il caso di "name" che è un dizionario (per proteggere da corruzione dati)
             existing_name = existing_item.get("name", "")
@@ -237,23 +259,23 @@ class ShoppingList:
                 real_name = self._extract_real_name(existing_name)
                 if real_name.lower() == item_name.lower():
                     # Sostituisci completamente l'elemento corrotto
-                    self.lists[user_id][i] = {
+                    self.lists[list_id][i] = {
                         "name": item_name, 
                         "quantity": quantity,
                         "category": category  # Aggiungi categoria
                     }
                     item_exists = True
                     break
-            elif existing_name.lower() == item_name.lower():
+            elif isinstance(existing_name, str) and existing_name.lower() == item_name.lower():
                 # Caso normale, aggiorna la quantità e categoria
-                self.lists[user_id][i]["quantity"] = quantity
-                self.lists[user_id][i]["category"] = category  # Aggiorna categoria
+                self.lists[list_id][i]["quantity"] = quantity
+                self.lists[list_id][i]["category"] = category  # Aggiorna categoria
                 item_exists = True
                 break
         
         if not item_exists and item_name:
             # Add new item with category
-            self.lists[user_id].append({
+            self.lists[list_id].append({
                 "name": item_name, 
                 "quantity": quantity,
                 "category": category
@@ -262,77 +284,109 @@ class ShoppingList:
         self.storage.save(self.lists)
         return (True, item_name, quantity, category)
     
-    def get_items(self, user_id):
+    def get_items(self, chat_id, user_id=None):
         """
-        Get all items in a user's shopping list.
+        Get all items in a shopping list.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
+            user_id: The telegram user ID (optional, used for private chats)
             
         Returns:
-            A list of item dictionaries with 'name' and 'quantity' keys
+            A list of item dictionaries with 'name', 'quantity', and 'category' keys
         """
-        user_id = str(user_id)
-        return self.lists.get(user_id, [])
+        list_id = self._get_list_id(chat_id, user_id)
+        return self.lists.get(list_id, [])
     
-    def get_item_names(self, user_id):
+    def get_item_names(self, chat_id, user_id=None):
         """
-        Get just the names of all items in a user's shopping list.
+        Get just the names of all items in a shopping list.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
+            user_id: The telegram user ID (optional, used for private chats)
             
         Returns:
             A list of item names
         """
-        items = self.get_items(user_id)
+        items = self.get_items(chat_id, user_id)
         return [item["name"] for item in items]
     
-    def remove_item(self, user_id, index):
+    def remove_item(self, chat_id, index, user_id=None):
         """
-        Remove an item from a user's shopping list by index.
+        Remove an item from a shopping list by index.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
             index: The index of the item to remove
+            user_id: The telegram user ID (optional, used for private chats)
             
         Returns:
             The removed item if successful, None otherwise
         """
-        user_id = str(user_id)
-        if user_id in self.lists and 0 <= index < len(self.lists[user_id]):
-            removed_item = self.lists[user_id].pop(index)
+        list_id = self._get_list_id(chat_id, user_id)
+        if list_id in self.lists and 0 <= index < len(self.lists[list_id]):
+            removed_item = self.lists[list_id].pop(index)
             self.storage.save(self.lists)
             return removed_item
         return None
     
-    def clear_list(self, user_id):
+    def clear_list(self, chat_id, user_id=None):
         """
-        Clear a user's entire shopping list.
+        Clear an entire shopping list.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
+            user_id: The telegram user ID (optional, used for private chats)
         """
-        user_id = str(user_id)
-        if user_id in self.lists:
-            self.lists[user_id] = []
+        list_id = self._get_list_id(chat_id, user_id)
+        if list_id in self.lists:
+            self.lists[list_id] = []
             self.storage.save(self.lists)
     
-    def update_quantity(self, user_id, index, quantity):
+    def update_quantity(self, chat_id, index, quantity, user_id=None):
         """
         Update the quantity of an item in the shopping list.
         
         Args:
-            user_id: The telegram user ID
+            chat_id: The telegram chat ID
             index: The index of the item to update
             quantity: The new quantity
+            user_id: The telegram user ID (optional, used for private chats)
             
         Returns:
             True if successful, False otherwise
         """
-        user_id = str(user_id)
-        if user_id in self.lists and 0 <= index < len(self.lists[user_id]):
-            self.lists[user_id][index]["quantity"] = quantity
+        list_id = self._get_list_id(chat_id, user_id)
+        if list_id in self.lists and 0 <= index < len(self.lists[list_id]):
+            self.lists[list_id][index]["quantity"] = quantity
             self.storage.save(self.lists)
             return True
         return False
+            
+    def is_group_chat(self, chat_id):
+        """
+        Check if the given chat_id is a group chat.
+        
+        Args:
+            chat_id: The telegram chat ID
+            
+        Returns:
+            True if it's a group chat, False otherwise
+        """
+        return chat_id < 0
+        
+    def get_list_type(self, chat_id):
+        """
+        Get a descriptive string of the list type.
+        
+        Args:
+            chat_id: The telegram chat ID
+            
+        Returns:
+            'Lista del gruppo' for group chats, 'La tua lista personale' for private chats
+        """
+        if self.is_group_chat(chat_id):
+            return "Lista del gruppo"
+        else:
+            return "La tua lista personale"

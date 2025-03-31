@@ -137,6 +137,7 @@ async def start_adding_item(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, item_text=None) -> int:
     """Process the item to add to the shopping list."""
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     
     # Get the item text from the message or the provided argument
     if item_text is None:
@@ -155,7 +156,10 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
             
         item_text = update.message.text
     
-    success, item_name, quantity, category = shopping_list.add_item(user_id, item_text)
+    success, item_name, quantity, category = shopping_list.add_item(chat_id, item_text, user_id)
+    
+    # Determina il tipo di lista (gruppo o personale)
+    list_type = shopping_list.get_list_type(chat_id)
     
     reply_markup = InlineKeyboardMarkup([[
         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
@@ -165,6 +169,8 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
         # Aggiungi emoji per la categoria
         category_emoji = get_category_emoji(category)
         reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity) + f"\n{category_emoji} Categoria: *{category}*"
+        # Aggiungi l'informazione sul tipo di lista
+        reply_text += f"\n\n_{list_type}_"
     else:
         reply_text = "Non sono riuscito ad aggiungere l'articolo. Riprova."
     
@@ -186,7 +192,8 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
 async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display the current shopping list with buttons for each item."""
     user_id = update.effective_user.id
-    items = shopping_list.get_items(user_id)
+    chat_id = update.effective_chat.id
+    items = shopping_list.get_items(chat_id, user_id)
     
     # Handle both message and callback query
     if update.callback_query:
@@ -199,7 +206,9 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await message.reply_text(LIST_EMPTY_MSG)
         return
     
-    message_text = LIST_HEADER_MSG + "\n\n"
+    # Get list type (group or personal)
+    list_type = shopping_list.get_list_type(chat_id)
+    message_text = f"*{LIST_HEADER_MSG}*\n_{list_type}_\n\n"
     keyboard = []
     
     # Group items by category
@@ -271,7 +280,8 @@ async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE
                 return ConversationHandler.END
     
     user_id = update.effective_user.id
-    items = shopping_list.get_items(user_id)
+    chat_id = update.effective_chat.id
+    items = shopping_list.get_items(chat_id, user_id)
     
     # Check if the list is empty
     if not items:
@@ -347,12 +357,17 @@ async def process_remove_callback(update: Update, context: ContextTypes.DEFAULT_
 async def process_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE, index) -> int:
     """Remove an item from the shopping list by index."""
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     
     try:
-        removed_item = shopping_list.remove_item(user_id, index)
+        removed_item = shopping_list.remove_item(chat_id, index, user_id)
         
         if removed_item:
             reply_text = ITEM_REMOVED_MSG.format(item=removed_item["name"])
+            
+            # Get list type (group or personal)
+            list_type = shopping_list.get_list_type(chat_id)
+            reply_text += f"\n\n_{list_type}_"
             
             # Reply based on the type of update
             if update.callback_query:
@@ -360,14 +375,16 @@ async def process_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE
                     reply_text,
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
-                    ]])
+                    ]]),
+                    parse_mode=ParseMode.MARKDOWN
                 )
             else:
                 await update.message.reply_text(
                     reply_text,
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
-                    ]])
+                    ]]),
+                    parse_mode=ParseMode.MARKDOWN
                 )
         else:
             reply_text = "Numero non valido. Usa /lista per vedere i numeri degli articoli."
@@ -397,7 +414,8 @@ async def start_setting_quantity(update: Update, context: ContextTypes.DEFAULT_T
         _, index_str = query.data.split(":")
         index = int(index_str)
         user_id = update.effective_user.id
-        items = shopping_list.get_items(user_id)
+        chat_id = update.effective_chat.id
+        items = shopping_list.get_items(chat_id, user_id)
         
         if 0 <= index < len(items):
             item = items[index]
@@ -425,13 +443,14 @@ async def process_set_quantity(update: Update, context: ContextTypes.DEFAULT_TYP
         return ConversationHandler.END
     
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     new_quantity = update.message.text.strip()
     
     if "current_item_index" in context.user_data:
         index = context.user_data["current_item_index"]
         item_name = context.user_data["current_item_name"]
         
-        success = shopping_list.update_quantity(user_id, index, new_quantity)
+        success = shopping_list.update_quantity(chat_id, index, new_quantity, user_id)
         
         if success:
             await update.message.reply_text(
@@ -456,6 +475,10 @@ async def process_set_quantity(update: Update, context: ContextTypes.DEFAULT_TYP
 async def clear_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clear the entire shopping list."""
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    # Get list type (group or personal)
+    list_type = shopping_list.get_list_type(chat_id)
     
     # Create confirmation keyboard
     keyboard = [
@@ -471,19 +494,24 @@ async def clear_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         
         if "confirm" in query.data:
             # User confirmed clearing the list
-            shopping_list.clear_list(user_id)
-            await query.message.edit_text(LIST_CLEARED_MSG)
+            shopping_list.clear_list(chat_id, user_id)
+            message_text = f"{LIST_CLEARED_MSG}\n\n_{list_type}_"
+            await query.message.edit_text(message_text, parse_mode=ParseMode.MARKDOWN)
         else:
             # Ask for confirmation
+            message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n_{list_type}_"
             await query.message.edit_text(
-                "Sei sicuro di voler svuotare l'intera lista della spesa?",
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                message_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode=ParseMode.MARKDOWN
             )
     else:
         # Ask for confirmation
+        message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n_{list_type}_"
         await update.message.reply_text(
-            "Sei sicuro di voler svuotare l'intera lista della spesa?",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            message_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode=ParseMode.MARKDOWN
         )
 
 async def cancel_operation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -499,7 +527,8 @@ async def cancel_operation(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def suggest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Get AI-powered suggestions based on the current shopping list."""
     user_id = update.effective_user.id
-    items = shopping_list.get_items(user_id)
+    chat_id = update.effective_chat.id
+    items = shopping_list.get_items(chat_id, user_id)
     item_names = [item["name"] for item in items]  # Extract just the names for AI
     
     # Handle both message and callback query
@@ -554,6 +583,7 @@ async def start_ai_question(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def process_ai_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Process the AI question."""
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     
     if "question" in context.user_data:
         question = context.user_data["question"]
@@ -565,7 +595,7 @@ async def process_ai_question(update: Update, context: ContextTypes.DEFAULT_TYPE
             
         question = update.message.text
     
-    items = shopping_list.get_items(user_id)
+    items = shopping_list.get_items(chat_id, user_id)
     item_names = [item["name"] for item in items]  # Extract just the names for AI
     
     if not items:
@@ -606,7 +636,8 @@ async def process_ai_question(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def categorize(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Categorize items in the shopping list."""
     user_id = update.effective_user.id
-    items = shopping_list.get_items(user_id)
+    chat_id = update.effective_chat.id
+    items = shopping_list.get_items(chat_id, user_id)
     item_names = [item["name"] for item in items]  # Extract just the names for AI
     
     # Handle both message and callback query
@@ -640,7 +671,8 @@ async def categorize(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def meal_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Generate a meal plan based on items in the shopping list."""
     user_id = update.effective_user.id
-    items = shopping_list.get_items(user_id)
+    chat_id = update.effective_chat.id
+    items = shopping_list.get_items(chat_id, user_id)
     item_names = [item["name"] for item in items]  # Extract just the names for AI
     
     # Handle both message and callback query
