@@ -207,7 +207,9 @@ def check_bot_health():
         return False, f"Connection error: {str(e)}"
 
 def main():
-    """Start the bot with proper verification."""
+    """Start the bot with proper verification and run it."""
+    import asyncio
+    
     # First check if the bot is healthy
     is_healthy, message = check_bot_health()
     
@@ -217,27 +219,85 @@ def main():
     
     logger.info(f"Bot health check passed: {message}")
     
+    # Get the token from environment variable
+    token = os.environ.get("TELEGRAM_TOKEN")
+    if not token:
+        logger.error("TELEGRAM_TOKEN environment variable not set!")
+        return
+    
+    # Create a new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    # Create the Application
+    application = ApplicationBuilder().token(token).build()
+    
+    # Add command handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("aiuto", help_command))
+    application.add_handler(CommandHandler("aggiungi", add_item))
+    application.add_handler(CommandHandler("lista", show_list))
+    application.add_handler(CommandHandler("rimuovi", remove_item))
+    application.add_handler(CommandHandler("svuota", clear_list))
+    application.add_handler(CommandHandler("suggerisci", suggest))
+    application.add_handler(CommandHandler("ai", ai_help))
+    application.add_handler(CommandHandler("categorie", categorize))
+    application.add_handler(CommandHandler("pasti", meal_plan))
+    
     # Notify the user to interact with the bot through Telegram
     logger.info("The bot is running. Please interact with it through Telegram.")
     logger.info("Bot feature checks are available through the web interface.")
     
-    # Keep the thread alive but don't consume resources
-    import time
-    while True:
-        time.sleep(60)
+    # Start the Bot
+    logger.info("Starting bot polling...")
+    application.run_polling(allowed_updates=["message"])
 
 def start_bot_thread():
-    """Start the Telegram bot in a separate thread."""
+    """Start the Telegram bot in a separate process."""
     global bot_status
     try:
         bot_status["status_message"] = "Starting bot..."
-        bot_thread = threading.Thread(target=main)
-        bot_thread.daemon = True
-        bot_thread.start()
-        bot_status["running"] = True
-        bot_status["status_message"] = "Bot running"
-        bot_status["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        logger.info("Bot thread started successfully")
+        
+        # Use subprocess to run the bot in a separate process
+        import subprocess
+        import os
+        import sys
+        
+        # Make telegram_bot.py executable if it's not already
+        os.chmod("telegram_bot.py", 0o755)
+        
+        # Create a new Python process
+        python_executable = sys.executable
+        
+        # Start the bot process with nohup to ensure it keeps running
+        bot_process = subprocess.Popen(
+            [python_executable, "telegram_bot.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=os.environ.copy()  # Copy the current environment to ensure TELEGRAM_TOKEN is passed
+        )
+        
+        # Wait a moment to see if it crashes immediately
+        import time
+        time.sleep(2)
+        
+        # Check if process is still running
+        if bot_process.poll() is None:
+            # Process is still running, looks good
+            bot_status["running"] = True
+            bot_status["status_message"] = "Bot running in separate process"
+            bot_status["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info("Bot process started successfully")
+            
+            # Store the process ID for reference
+            bot_status["process_id"] = bot_process.pid
+        else:
+            # Process exited
+            stdout, stderr = bot_process.communicate()
+            error_msg = stderr.decode('utf-8')
+            bot_status["status_message"] = f"Bot process exited: {error_msg}"
+            logger.error(f"Bot process exited: {error_msg}")
+            
     except Exception as e:
         bot_status["status_message"] = f"Error starting bot: {str(e)}"
         logger.error(f"Error starting bot: {e}")
