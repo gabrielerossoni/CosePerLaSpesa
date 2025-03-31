@@ -26,7 +26,7 @@ def home():
 def run_keep_alive():
     """Run the Flask app on a separate port."""
     # Use a different port than the main app (5000)
-    keep_alive_app.run(host='0.0.0.0', port=9393)
+    keep_alive_app.run(host='0.0.0.0', port=9393, debug=False)
 
 def start_keep_alive_server():
     """Start the keep-alive server in a separate thread."""
