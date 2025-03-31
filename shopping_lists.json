@@ -61,6 +61,11 @@
       "name": "patate",
       "quantity": "1",
       "category": "Frutta e Verdura"
+    },
+    {
+      "name": "cioccolato",
+      "quantity": "1",
+      "category": "Bevande"
     }
   ],
   "group_1001474091557": []
