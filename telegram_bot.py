@@ -14,6 +14,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes, ConversationHandler,
     CallbackQueryHandler, MessageHandler, filters
 )
+from telegram.request import HTTPXRequest
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup,
     ReplyKeyboardRemove, KeyboardButton
@@ -762,8 +763,9 @@ if __name__ == "__main__":
         logger.error("TELEGRAM_TOKEN environment variable not set!")
         sys.exit(1)
     
-    # Create the Application
-    application = ApplicationBuilder().token(token).build()
+    # Create the Application with custom request handler
+    request = HTTPXRequest()  # Initialize without proxy parameter
+    application = ApplicationBuilder().token(token).request(request).build()
     
     # Add conversation handlers
     add_item_conv = ConversationHandler(
