@@ -78,17 +78,32 @@ async def start_adding_item(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if len(text) > 1:
             return await process_add_item(update, context, text[1].strip())
     
-    await update.message.reply_text(
-        "Cosa vuoi aggiungere alla tua lista della spesa? Specificando anche la quantità se lo desideri.\n\n"
-        "Esempi:\n"
-        "• pane\n"
-        "• 2 kg di patate\n"
-        "• mele (6 pezzi)\n\n"
-        "Per annullare, premi Annulla o digita /annulla.",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(BTN_CANCEL, callback_data=CB_CANCEL)
-        ]])
-    )
+    message_text = "Cosa vuoi aggiungere alla tua lista della spesa? Specificando anche la quantità se lo desideri.\n\n" \
+                  "Esempi:\n" \
+                  "• pane\n" \
+                  "• 2 kg di patate\n" \
+                  "• mele (6 pezzi)\n\n" \
+                  "Per annullare, premi Annulla o digita /annulla."
+    
+    reply_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton(BTN_CANCEL, callback_data=CB_CANCEL)
+    ]])
+    
+    # Handle both message and callback query
+    if update.callback_query:
+        # It's a button press
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(
+            message_text,
+            reply_markup=reply_markup
+        )
+    else:
+        # It's a direct command or text message
+        await update.message.reply_text(
+            message_text,
+            reply_markup=reply_markup
+        )
+    
     return STATE_WAITING_ITEM
 
 async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, item_text=None) -> int:
@@ -102,26 +117,39 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
             if update.callback_query.data == CB_CANCEL:
                 await update.callback_query.message.edit_text("Operazione annullata.")
                 return ConversationHandler.END
+            # Nessun altro callback dovrebbe arrivare qui
+            await update.callback_query.answer("Si è verificato un errore.")
+            return ConversationHandler.END
+        
+        if not update.message:
+            logger.error("Nessun messaggio trovato nell'update")
+            return ConversationHandler.END
             
         item_text = update.message.text
     
     success, item_name, quantity = shopping_list.add_item(user_id, item_text)
     
+    reply_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
+    ]])
+    
     if success:
         reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity)
-        
-        if update.message:
-            await update.message.reply_text(
-                reply_text,
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
-                ]])
-            )
     else:
         reply_text = "Non sono riuscito ad aggiungere l'articolo. Riprova."
-        
-        if update.message:
-            await update.message.reply_text(reply_text)
+    
+    # Invia la risposta in base al tipo di update
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(
+            reply_text,
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            reply_text,
+            reply_markup=reply_markup
+        )
     
     return ConversationHandler.END
 
@@ -184,8 +212,14 @@ async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     items = shopping_list.get_items(user_id)
     
+    # Check if the list is empty
     if not items:
-        await update.message.reply_text("La tua lista della spesa è vuota.")
+        # Handle both message and callback query
+        if update.callback_query:
+            await update.callback_query.answer()
+            await update.callback_query.message.reply_text("La tua lista della spesa è vuota.")
+        else:
+            await update.message.reply_text("La tua lista della spesa è vuota.")
         return ConversationHandler.END
     
     message = "Quale articolo vuoi rimuovere? Inserisci il numero:\n\n"
@@ -206,10 +240,21 @@ async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     keyboard.append([InlineKeyboardButton(BTN_CANCEL, callback_data=CB_CANCEL)])
     
-    await update.message.reply_text(
-        message,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Handle both message and callback query
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(
+            message,
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            message,
+            reply_markup=reply_markup
+        )
+    
     return STATE_WAITING_REMOVE
 
 async def process_remove_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -589,19 +634,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif data == CB_SHOW:
         await query.answer()
         await show_list(update, context)
-    elif data.startswith(CB_CLEAR):
+    elif data.startswith(CB_CLEAR) and not ":" in data:
+        await query.answer()
         await clear_list(update, context)
     elif data.startswith(CB_SUGGEST):
+        await query.answer()
         await suggest(update, context)
     elif data.startswith(CB_CATEGORIES):
+        await query.answer() 
         await categorize(update, context)
     elif data.startswith(CB_MEAL):
+        await query.answer()
         await meal_plan(update, context)
     elif data == CB_CANCEL:
         await query.answer()
         await query.message.edit_text("Operazione annullata.")
     else:
-        await query.answer("Azione non riconosciuta.")
+        # Per altri callback queries che non vengono gestiti altrove
+        await query.answer("Operazione non riconosciuta")
 
 
 if __name__ == "__main__":
