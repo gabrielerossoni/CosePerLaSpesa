@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": ""
+  },
+  "deploy": {
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --reuse-port main:app",
+    "healthcheckPath": "/status",
+    "healthcheckTimeout": 120,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
