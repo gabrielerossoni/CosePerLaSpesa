@@ -4,6 +4,23 @@
       "name": "pane",
       "quantity": "1",
       "category": "Pane e Cereali"
+    },
+    {
+      "name": "mele",
+      "quantity": "1",
+      "category": "Frutta e Verdura"
+    }
+  ],
+  "592731075": [
+    {
+      "name": "yogurt greco",
+      "quantity": "1",
+      "category": "Latticini"
+    },
+    {
+      "name": "📋 Mostra Lista",
+      "quantity": "1",
+      "category": "Altro"
     }
   ]
 }

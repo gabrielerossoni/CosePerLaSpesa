@@ -703,7 +703,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif data == CB_SHOW:
         await query.answer()
         await show_list(update, context)
-    elif data.startswith(CB_CLEAR) and not ":" in data:
+    elif data.startswith(CB_CLEAR):
         await query.answer()
         await clear_list(update, context)
     elif data.startswith(CB_SUGGEST):
