@@ -25,3 +25,21 @@ Un bot Telegram in italiano per gestire in modo intelligente le liste della spes
 - OpenAI GPT per funzionalità AI
 - Sistema di fallback multilivello per garantire disponibilità
 - Storage persistente per mantenere le liste tra i riavvii
+- Flask + Gunicorn per l'interfaccia web di monitoraggio
+
+## Deployment
+
+### Local (Replit)
+Il bot può essere eseguito direttamente su Replit utilizzando il workflow configurato. Assicurati di impostare le variabili d'ambiente:
+- `TELEGRAM_TOKEN`: Il token del tuo bot Telegram
+- `OPENAI_API_KEY`: La tua chiave API OpenAI
+
+### Railway (24/7 Hosting)
+Per un hosting continuo anche quando il PC è spento, segui le istruzioni nel file `railway-deploy.md` per deployare su Railway.
+
+1. Push del codice su GitHub (già configurato con repository: `https://github.com/gabrielerossoni/CosePerLaSpesa`)
+2. Connessione del repository a Railway
+3. Configurazione delle variabili d'ambiente
+4. Deploy automatico
+
+Per istruzioni dettagliate, vedi il file `railway-deploy.md`.
