@@ -322,8 +322,15 @@ def status():
     """API endpoint to get bot status."""
     return jsonify(bot_status)
 
+# Import keep-alive functionality
+from keep_alive import start_keep_alive_server
+
 # Initialize bot when the app starts
 try:
+    # Start keep-alive server first
+    keep_alive_thread = start_keep_alive_server()
+    
+    # Then start the bot
     start_bot_thread()
     logger.info("Bot initialization completed")
 except Exception as e:
