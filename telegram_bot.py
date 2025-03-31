@@ -173,15 +173,21 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = []
     
     for index, item in enumerate(items, start=1):
-        # Format: 1. Patate (2 kg)
+        # Format the display text for items
         item_name = item["name"]
         quantity = item["quantity"]
-        message_text += f"{index}. {item_name} ({quantity})\n"
         
-        # Add buttons for each item
+        # Se la quantità è solo "1", non mostrarla
+        if quantity == "1":
+            message_text += f"{index}. {item_name}\n"
+        else:
+            # Altrimenti formatta in modo più leggibile
+            message_text += f"{index}. {item_name} - {quantity}\n"
+        
+        # Add buttons for each item with clear labels
         keyboard.append([
-            InlineKeyboardButton(f"🗑️ {index}", callback_data=f"{CB_REMOVE}:{index-1}"),
-            InlineKeyboardButton(f"📝 {index}", callback_data=f"{CB_SET_QTY}:{index-1}")
+            InlineKeyboardButton(f"🗑️ Rimuovi {index}", callback_data=f"{CB_REMOVE}:{index-1}"),
+            InlineKeyboardButton(f"📝 Modifica {index}", callback_data=f"{CB_SET_QTY}:{index-1}")
         ])
     
     # Add common action buttons
@@ -226,7 +232,13 @@ async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     for index, item in enumerate(items, start=1):
         item_name = item["name"]
         quantity = item["quantity"]
-        message += f"{index}. {item_name} ({quantity})\n"
+        
+        # Se la quantità è solo "1", non mostrarla
+        if quantity == "1":
+            message += f"{index}. {item_name}\n"
+        else:
+            # Altrimenti formatta in modo più leggibile
+            message += f"{index}. {item_name} - {quantity}\n"
     
     keyboard = []
     row = []

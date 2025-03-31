@@ -46,23 +46,36 @@ class ShoppingList:
         quantity = "1"
         item_name = item_text
         
-        # Try to extract quantity
-        quantity_pattern = re.compile(r'^(\d+(?:[,.]\d+)?)\s*([a-zA-Z]*)\s+(?:di\s+)?(.+)$')
-        match = quantity_pattern.match(item_text)
+        # Pattern 1: "2 kg di patate" (quantità + unità + "di" + nome)
+        pattern1 = re.compile(r'^(\d+(?:[,.]\d+)?)\s*([a-zA-Z]*)\s+(?:di\s+)(.+)$')
+        # Pattern 2: "3 patate" (quantità + nome)
+        pattern2 = re.compile(r'^(\d+(?:[,.]\d+)?)\s+(.+)$')
+        # Pattern 3: "patate (2kg)" (nome + quantità tra parentesi)
+        pattern3 = re.compile(r'^(.+?)\s*\((\d+(?:[,.]\d+)?\s*[a-zA-Z]*)\)$')
         
-        if match:
-            # Format: "2 kg di patate" or "3 patate"
-            amount, unit, name = match.groups()
+        match1 = pattern1.match(item_text)
+        match2 = pattern2.match(item_text) 
+        match3 = pattern3.match(item_text)
+        
+        if match1:
+            # Format: "2 kg di patate"
+            amount, unit, name = match1.groups()
             quantity = f"{amount} {unit}".strip()
             item_name = name.strip()
-        else:
-            # Try alternative pattern: "patate (2kg)"
-            alt_pattern = re.compile(r'^(.+?)\s*\((\d+(?:[,.]\d+)?\s*[a-zA-Z]*)\)$')
-            match = alt_pattern.match(item_text)
-            if match:
-                name, amount = match.groups()
-                item_name = name.strip()
-                quantity = amount.strip()
+        elif match2:
+            # Format: "3 patate"
+            amount, name = match2.groups()
+            # Se non c'è unità di misura, assumiamo "pezzi"
+            if amount == "1":
+                quantity = "1"  # Per 1 pezzo, manteniamo semplicemente "1"
+            else:
+                quantity = f"{amount} pz"
+            item_name = name.strip()
+        elif match3:
+            # Format: "patate (2kg)"
+            name, amount = match3.groups()
+            item_name = name.strip()
+            quantity = amount.strip()
         
         # Check if the item already exists
         item_exists = False
