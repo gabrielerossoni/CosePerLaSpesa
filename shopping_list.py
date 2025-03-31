@@ -67,15 +67,108 @@ class ShoppingList:
                 if "name" in item and isinstance(item["name"], dict):
                     real_name = self._extract_real_name(item["name"])
                     if real_name:
+                        # Categorize the item if it doesn't have a category
+                        if "category" not in item:
+                            category = self._categorize_item(real_name)
+                        else:
+                            category = item.get("category", "")
+                            
                         repaired_items.append({
                             "name": real_name,
-                            "quantity": item.get("quantity", "1")
+                            "quantity": item.get("quantity", "1"),
+                            "category": category
                         })
                 # Se l'elemento ha una struttura valida, lo manteniamo
                 elif "name" in item and isinstance(item["name"], str):
+                    # Ensure all items have a category
+                    if "category" not in item:
+                        item["category"] = self._categorize_item(item["name"])
                     repaired_items.append(item)
                     
             self.lists[user_id] = repaired_items
+            
+    def _categorize_item(self, item_name):
+        """
+        Automatically categorize an item based on its name.
+        
+        Args:
+            item_name: The name of the item to categorize
+            
+        Returns:
+            A string with the category name
+        """
+        # Lista di categorie con parole chiave associate
+        categories = {
+            "Frutta e Verdura": ["mela", "mele", "banana", "banane", "arancia", "arance", "carota", "carote", 
+                                "zucchina", "zucchine", "pomodoro", "pomodori", "insalata", "lattuga", "spinaci", 
+                                "fragola", "fragole", "kiwi", "pesca", "pesche", "melanzana", "melanzane", 
+                                "broccolo", "broccoli", "patata", "patate", "cipolla", "cipolle", "aglio", 
+                                "peperone", "peperoni", "funghi", "fungo", "sedano", "finocchio", "finocchi",
+                                "limone", "limoni", "zucca", "mango", "melone", "anguria", "verdura", "frutta"],
+            
+            "Carne e Pesce": ["carne", "pollo", "tacchino", "maiale", "manzo", "bistecca", "hamburger", 
+                             "salsiccia", "salsicce", "pesce", "tonno", "salmone", "merluzzo", "acciughe", 
+                             "prosciutto", "salame", "bresaola", "speck", "mortadella", "pancetta", "wurstel",
+                             "cotoletta", "polpette", "gamberi", "calamari", "coscia", "petto", "fettina",
+                             "alici", "vongole", "cozze", "frutti di mare"],
+            
+            "Latticini": ["latte", "formaggio", "formaggi", "mozzarella", "yogurt", "burro", "panna", 
+                         "ricotta", "parmigiano", "grana", "pecorino", "gorgonzola", "stracchino", 
+                         "scamorza", "mascarpone", "kefir", "brie", "caciotta", "uova", "uovo",
+                         "fiordilatte", "latticino", "latticini", "philadelphia", "crescenza",
+                         "fontina", "emmental", "asiago"],
+            
+            "Pane e Cereali": ["pane", "pasta", "riso", "cereali", "farina", "cracker", "crackers", "grissini", 
+                               "pizza", "avena", "orzo", "farro", "quinoa", "cous cous", "mais", "muesli",
+                               "biscotti", "fette biscottate", "croissant", "brioche", "cornetto", "cornetti",
+                               "panino", "panini", "baguette", "piadina", "focaccia", "chapati", "tortilla"],
+            
+            "Bevande": ["acqua", "succo", "tè", "tea", "the", "caffè", "caffe", "vino", "birra", "soda", 
+                       "limonata", "aranciata", "cola", "energy drink", "tisana", "smoothie", "spremuta",
+                       "bibita", "bibite", "bevanda", "bevande", "whisky", "vodka", "rum", "gin", "liquore",
+                       "champagne", "spumante", "prosecco", "beverage", "gassosa", "chinotto"],
+            
+            "Condimenti": ["sale", "pepe", "olio", "aceto", "spezia", "spezie", "erba", "erbe", "salsa", 
+                          "maionese", "ketchup", "senape", "zucchero", "tabasco", "soia", "pesto",
+                          "curry", "paprika", "origano", "basilico", "rosmarino", "timo", "cannella",
+                          "noce moscata", "zafferano", "curcuma", "condimento", "condimenti"],
+            
+            "Surgelati": ["surgelato", "surgelati", "gelato", "gelati", "ghiacciolo", "ghiaccioli", 
+                         "verdure surgelate", "pesce surgelato", "pizza surgelata", "bastoncini", "sofficini",
+                         "congelato", "congelati", "frozen", "cubetti di ghiaccio"],
+            
+            "Legumi e Frutta secca": ["legumi", "lenticchie", "ceci", "fagioli", "fave", "piselli", 
+                                     "soia", "arachidi", "noci", "nocciole", "mandorle", "pistacchi", 
+                                     "anacardi", "frutta secca", "semi", "tofu", "seitan", "tempeh",
+                                     "lupini", "pinoli", "semi di zucca", "semi di girasole", "semi di lino",
+                                     "castagne", "datteri", "albicocche secche", "prugne secche"],
+            
+            "Snack e Dolci": ["biscotti", "cioccolato", "cioccolata", "caramelle", "caramella", "torta", 
+                             "merendine", "patatine", "snack", "dolci", "dolce", "wafer", "nutella", 
+                             "marmellata", "miele", "gelato", "budino", "crostata", "bombolone",
+                             "patatine", "chips", "noccioline", "barretta", "dessert", "cialda", "cono"],
+                             
+            "Prodotti da Forno": ["pane", "focaccia", "brioche", "cornetto", "biscotti", "torta", "crostata",
+                                 "pizza", "panino", "panini", "grissini", "cracker", "fette biscottate",
+                                 "piadina", "ciabatta", "baguette", "filone", "ciambella"],
+                                 
+            "Prodotti per la Casa": ["detersivo", "sapone", "carta igienica", "fazzoletti", "asciugamani", 
+                                    "tovaglioli", "piatti", "bicchieri", "posate", "spugna", "spugne", 
+                                    "candeggina", "ammoniaca", "sgrassatore", "sacchetti", "lampadina", 
+                                    "batterie", "pile", "scottex", "salviette", "fiammiferi"]
+        }
+        
+        # Normalizza il nome dell'articolo
+        item_name = item_name.lower().strip()
+        
+        # Controlla se il nome dell'articolo contiene una delle parole chiave
+        for category, keywords in categories.items():
+            for keyword in keywords:
+                if keyword in item_name or item_name in keyword:
+                    return category
+        
+        # Se non viene trovata nessuna corrispondenza, restituisci "Altro"
+        return "Altro"
     
     def add_item(self, user_id, item_text):
         """
@@ -86,8 +179,8 @@ class ShoppingList:
             item_text: The item to add, with optional quantity (e.g. "2 kg di patate")
             
         Returns:
-            A tuple (success, item_name, quantity) where success is a boolean,
-            item_name is the name of the item, and quantity is the quantity string
+            A tuple (success, item_name, quantity, category) where success is a boolean,
+            item_name is the name of the item, quantity is the quantity string, and category is the item category
         """
         user_id = str(user_id)
         if user_id not in self.lists:
@@ -130,6 +223,9 @@ class ShoppingList:
             item_name = name.strip()
             quantity = amount.strip()
         
+        # Automatically categorize the item
+        category = self._categorize_item(item_name)
+        
         # Check if the item already exists
         item_exists = False
         for i, existing_item in enumerate(self.lists[user_id]):
@@ -141,21 +237,30 @@ class ShoppingList:
                 real_name = self._extract_real_name(existing_name)
                 if real_name.lower() == item_name.lower():
                     # Sostituisci completamente l'elemento corrotto
-                    self.lists[user_id][i] = {"name": item_name, "quantity": quantity}
+                    self.lists[user_id][i] = {
+                        "name": item_name, 
+                        "quantity": quantity,
+                        "category": category  # Aggiungi categoria
+                    }
                     item_exists = True
                     break
             elif existing_name.lower() == item_name.lower():
-                # Caso normale, aggiorna la quantità
+                # Caso normale, aggiorna la quantità e categoria
                 self.lists[user_id][i]["quantity"] = quantity
+                self.lists[user_id][i]["category"] = category  # Aggiorna categoria
                 item_exists = True
                 break
         
         if not item_exists and item_name:
-            # Add new item
-            self.lists[user_id].append({"name": item_name, "quantity": quantity})
+            # Add new item with category
+            self.lists[user_id].append({
+                "name": item_name, 
+                "quantity": quantity,
+                "category": category
+            })
         
         self.storage.save(self.lists)
-        return (True, item_name, quantity)
+        return (True, item_name, quantity, category)
     
     def get_items(self, user_id):
         """

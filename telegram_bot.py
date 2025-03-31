@@ -39,6 +39,34 @@ from constants import (
     STATE_WAITING_REMOVE, STATE_WAITING_QUESTION, ERROR_MSG
 )
 
+# Mappa delle emoji per ogni categoria
+CATEGORY_EMOJI = {
+    "Frutta e Verdura": "🥬",
+    "Carne e Pesce": "🥩",
+    "Latticini": "🧀",
+    "Pane e Cereali": "🍞",
+    "Bevande": "🥤",
+    "Condimenti": "🧂",
+    "Surgelati": "❄️",
+    "Legumi e Frutta secca": "🥜",
+    "Snack e Dolci": "🍪",
+    "Prodotti da Forno": "🥐",
+    "Prodotti per la Casa": "🧹",
+    "Altro": "📦"
+}
+
+def get_category_emoji(category):
+    """
+    Restituisce l'emoji corrispondente alla categoria.
+    
+    Args:
+        category: Nome della categoria
+        
+    Returns:
+        Emoji come stringa
+    """
+    return CATEGORY_EMOJI.get(category, "📦")
+
 # Initialize global variables
 shopping_list = ShoppingList()
 ai_assistant = AIAssistant()
@@ -127,14 +155,16 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
             
         item_text = update.message.text
     
-    success, item_name, quantity = shopping_list.add_item(user_id, item_text)
+    success, item_name, quantity, category = shopping_list.add_item(user_id, item_text)
     
     reply_markup = InlineKeyboardMarkup([[
         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
     ]])
     
     if success:
-        reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity)
+        # Aggiungi emoji per la categoria
+        category_emoji = get_category_emoji(category)
+        reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity) + f"\n{category_emoji} Categoria: *{category}*"
     else:
         reply_text = "Non sono riuscito ad aggiungere l'articolo. Riprova."
     
@@ -172,23 +202,48 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = LIST_HEADER_MSG + "\n\n"
     keyboard = []
     
+    # Group items by category
+    categories = {}
     for index, item in enumerate(items, start=1):
-        # Format the display text for items
         item_name = item["name"]
         quantity = item["quantity"]
+        category = item.get("category", "Altro")
         
-        # Se la quantità è solo "1", non mostrarla
-        if quantity == "1":
-            message_text += f"{index}. {item_name}\n"
-        else:
-            # Altrimenti formatta in modo più leggibile
-            message_text += f"{index}. {item_name} - {quantity}\n"
+        if category not in categories:
+            categories[category] = []
         
-        # Add buttons for each item with clear labels
-        keyboard.append([
-            InlineKeyboardButton(f"🗑️ Rimuovi {index}", callback_data=f"{CB_REMOVE}:{index-1}"),
-            InlineKeyboardButton(f"📝 Modifica {index}", callback_data=f"{CB_SET_QTY}:{index-1}")
-        ])
+        categories[category].append({
+            "index": index,
+            "name": item_name,
+            "quantity": quantity,
+            "item_index": index-1  # Zero-based index for callbacks
+        })
+    
+    # Sort categories alphabetically, but put "Altro" at the end
+    sorted_categories = sorted(categories.keys(), key=lambda x: "ZZZ" if x == "Altro" else x)
+    
+    # Display items grouped by category
+    for category in sorted_categories:
+        category_emoji = get_category_emoji(category)
+        message_text += f"\n*{category_emoji} {category}*\n"
+        
+        for item in categories[category]:
+            index = item["index"]
+            item_name = item["name"]
+            quantity = item["quantity"]
+            
+            # Se la quantità è solo "1", non mostrarla
+            if quantity == "1":
+                message_text += f"  {index}. {item_name}\n"
+            else:
+                # Altrimenti formatta in modo più leggibile
+                message_text += f"  {index}. {item_name} - {quantity}\n"
+            
+            # Add buttons for each item with clear labels
+            keyboard.append([
+                InlineKeyboardButton(f"🗑️ Rimuovi {index}", callback_data=f"{CB_REMOVE}:{item['item_index']}"),
+                InlineKeyboardButton(f"📝 Modifica {index}", callback_data=f"{CB_SET_QTY}:{item['item_index']}")
+            ])
     
     # Add common action buttons
     keyboard.append([
@@ -232,13 +287,15 @@ async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE
     for index, item in enumerate(items, start=1):
         item_name = item["name"]
         quantity = item["quantity"]
+        category = item.get("category", "Altro")
+        category_emoji = get_category_emoji(category)
         
         # Se la quantità è solo "1", non mostrarla
         if quantity == "1":
-            message += f"{index}. {item_name}\n"
+            message += f"{index}. {category_emoji} {item_name}\n"
         else:
             # Altrimenti formatta in modo più leggibile
-            message += f"{index}. {item_name} - {quantity}\n"
+            message += f"{index}. {category_emoji} {item_name} - {quantity}\n"
     
     keyboard = []
     row = []
