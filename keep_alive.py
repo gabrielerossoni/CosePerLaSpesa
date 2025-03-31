@@ -1,3 +1,4 @@
+
 """
 Keep alive module for Replit projects.
 This prevents the bot from going to sleep when deployed.
@@ -25,11 +26,11 @@ def home():
 def run_keep_alive():
     """Run the Flask app on a separate port."""
     # Use a different port than the main app (5000)
-    keep_alive_app.run(host='0.0.0.0', port=8080)
+    keep_alive_app.run(host='0.0.0.0', port=9090)
 
 def start_keep_alive_server():
     """Start the keep-alive server in a separate thread."""
-    logger.info("Starting keep-alive server on port 8080...")
+    logger.info("Starting keep-alive server on port 9090...")
     keep_alive_thread = Thread(target=run_keep_alive)
     # Set as daemon so it automatically terminates when main program exits
     keep_alive_thread.daemon = True
