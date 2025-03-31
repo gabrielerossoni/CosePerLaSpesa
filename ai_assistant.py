@@ -147,12 +147,23 @@ Nel frattempo, ecco alcuni consigli generali:
         Get suggestions for additional items based on the current shopping list.
         
         Args:
-            items: The current items in the shopping list
+            items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
             
         Returns:
             A string with suggestions
         """
-        item_list = ", ".join(items)
+        # Ensure we have a list of strings for proper formatting
+        if items and isinstance(items, list):
+            if isinstance(items[0], dict) and "name" in items[0]:
+                # Format items with quantities for better context
+                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+            else:
+                # Already a list of strings
+                formatted_items = items
+        else:
+            formatted_items = []
+            
+        item_list = ", ".join(formatted_items)
         
         messages = [
             {"role": "system", "content": "Sei un assistente italiano esperto in spesa e cucina. Devi suggerire 3-5 prodotti correlati basandoti sulla lista della spesa dell'utente. Ogni suggerimento deve essere accompagnato da una breve motivazione e un emoji pertinente. Le risposte devono essere in italiano."},
@@ -166,12 +177,23 @@ Nel frattempo, ecco alcuni consigli generali:
         Categorize the items in the shopping list.
         
         Args:
-            items: The current items in the shopping list
+            items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
             
         Returns:
             A string with categorized items
         """
-        item_list = ", ".join(items)
+        # Ensure we have a list of strings for proper formatting
+        if items and isinstance(items, list):
+            if isinstance(items[0], dict) and "name" in items[0]:
+                # Format items with quantities for better context
+                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+            else:
+                # Already a list of strings
+                formatted_items = items
+        else:
+            formatted_items = []
+        
+        item_list = ", ".join(formatted_items)
         
         messages = [
             {"role": "system", "content": "Sei un assistente italiano esperto in spesa. Devi organizzare la lista della spesa dell'utente in categorie logiche (come 'Frutta e Verdura', 'Latticini', 'Carne', ecc). Formula la risposta come un elenco ordinato per categorie, con emoji appropriate per ogni categoria. Le risposte devono essere in italiano."},
@@ -185,13 +207,24 @@ Nel frattempo, ecco alcuni consigli generali:
         Answer questions about the shopping list.
         
         Args:
-            items: The current items in the shopping list
+            items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
             question: The user's question
             
         Returns:
             A string with the answer
         """
-        item_list = ", ".join(items)
+        # Ensure we have a list of strings for proper formatting
+        if items and isinstance(items, list):
+            if isinstance(items[0], dict) and "name" in items[0]:
+                # Format items with quantities for better context
+                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+            else:
+                # Already a list of strings
+                formatted_items = items
+        else:
+            formatted_items = []
+        
+        item_list = ", ".join(formatted_items)
         
         messages = [
             {"role": "system", "content": "Sei un assistente italiano esperto in spesa e cucina. Rispondi alle domande dell'utente riguardo la sua lista della spesa. Fornisci informazioni utili, consigli e suggerimenti. Le risposte devono essere dettagliate ma concise, in italiano e con un tono amichevole."},
@@ -205,12 +238,23 @@ Nel frattempo, ecco alcuni consigli generali:
         Generate a meal plan based on the items in the shopping list.
         
         Args:
-            items: The current items in the shopping list
+            items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
             
         Returns:
             A string with the meal plan
         """
-        item_list = ", ".join(items)
+        # Ensure we have a list of strings for proper formatting
+        if items and isinstance(items, list):
+            if isinstance(items[0], dict) and "name" in items[0]:
+                # Format items with quantities for better context
+                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+            else:
+                # Already a list of strings
+                formatted_items = items
+        else:
+            formatted_items = []
+        
+        item_list = ", ".join(formatted_items)
         
         messages = [
             {"role": "system", "content": "Sei un assistente italiano esperto in cucina. Devi creare un piano dei pasti per 3 giorni (colazione, pranzo e cena) utilizzando principalmente gli ingredienti disponibili nella lista della spesa dell'utente. Se necessario, puoi suggerire pochi ingredienti aggiuntivi. Le ricette devono essere semplici ma gustose. Organizza il piano in modo chiaro, con emoji appropriate e brevi descrizioni delle ricette. Le risposte devono essere in italiano."},

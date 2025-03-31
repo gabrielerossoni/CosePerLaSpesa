@@ -275,6 +275,10 @@ def start_bot_thread():
         # Create a new Python process
         python_executable = sys.executable
         
+        # Install missing packages if needed
+        subprocess.run([python_executable, "-m", "pip", "install", "--upgrade", "python-telegram-bot"], 
+                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
         # Start the bot process with nohup to ensure it keeps running
         bot_process = subprocess.Popen(
             [python_executable, "telegram_bot.py"],
