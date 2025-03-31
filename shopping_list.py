@@ -267,9 +267,20 @@ class ShoppingList:
                     item_exists = True
                     break
             elif isinstance(existing_name, str) and existing_name.lower() == item_name.lower():
-                # Caso normale, aggiorna solo la quantità se è specificata
-                if quantity != "1":  # Aggiorna la quantità solo se è diversa dal default
-                    self.lists[list_id][i]["quantity"] = quantity
+                # Caso normale, somma le quantità se possibile
+                if quantity != "1":  # Se c'è una nuova quantità specificata
+                    try:
+                        # Estrai i numeri dalle stringhe di quantità
+                        old_quantity = float(''.join(filter(str.isdigit, existing_item["quantity"].replace(',', '.'))))
+                        new_quantity = float(''.join(filter(str.isdigit, quantity.replace(',', '.'))))
+                        # Estrai l'unità di misura se presente
+                        unit = ''.join(filter(str.isalpha, quantity))
+                        # Somma le quantità e mantieni l'unità di misura
+                        total = old_quantity + new_quantity
+                        self.lists[list_id][i]["quantity"] = f"{total}{unit}" if unit else str(total)
+                    except ValueError:
+                        # Se non riusciamo a convertire i numeri, sostituisci semplicemente la quantità
+                        self.lists[list_id][i]["quantity"] = quantity
                 self.lists[list_id][i]["category"] = category  # Aggiorna categoria
                 item_exists = True
                 break
