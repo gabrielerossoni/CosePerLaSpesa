@@ -56,6 +56,12 @@
       "category": "Pane e Cereali"
     }
   ],
-  "user_984920043": [],
+  "user_984920043": [
+    {
+      "name": "patate",
+      "quantity": "1",
+      "category": "Frutta e Verdura"
+    }
+  ],
   "group_1001474091557": []
 }
