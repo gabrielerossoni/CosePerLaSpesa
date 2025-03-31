@@ -36,7 +36,7 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-info-circle-fill fs-4 me-2"></i>
                                 <span>
-                                    Per utilizzare il bot, cerca <strong>@il_tuo_bot_username</strong> su Telegram e inizia una chat!
+                                    Per utilizzare il bot, cerca <strong>{{ bot_status.bot_username|default('@lista_della_spesa_bot') }}</strong> su Telegram e inizia una chat!
                                 </span>
                             </div>
                         </div>
@@ -109,8 +109,8 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <a href="https://telegram.me/" class="btn btn-lg telegram-color" target="_blank">
-                                <i class="bi bi-send-fill me-2"></i>Apri Telegram
+                            <a href="https://telegram.me/{{ bot_status.bot_username|default('CosePerLaSpesaBot')|replace('@', '') }}" class="btn btn-lg telegram-color" target="_blank">
+                                <i class="bi bi-send-fill me-2"></i>Apri Telegram per Chattare con il Bot
                             </a>
                         </div>
                     </div>

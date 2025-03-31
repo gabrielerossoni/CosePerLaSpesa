@@ -183,7 +183,7 @@ def check_bot_health():
     
     if not token:
         logger.error("TELEGRAM_TOKEN environment variable not set!")
-        return False, "TELEGRAM_TOKEN environment variable not set!"
+        return False, "TELEGRAM_TOKEN environment variable not set!", None
     
     # Check if OpenAI API key is set
     openai_key = os.environ.get("OPENAI_API_KEY")
@@ -198,20 +198,20 @@ def check_bot_health():
             data = response.json()
             if data.get('ok'):
                 bot_name = data.get('result', {}).get('username', 'Unknown')
-                return True, f"Connected to @{bot_name}"
+                return True, f"Connected to @{bot_name}", f"@{bot_name}"
             else:
-                return False, f"Invalid token: {data.get('description', 'Unknown error')}"
+                return False, f"Invalid token: {data.get('description', 'Unknown error')}", None
         else:
-            return False, f"API error: Status {response.status_code}"
+            return False, f"API error: Status {response.status_code}", None
     except Exception as e:
-        return False, f"Connection error: {str(e)}"
+        return False, f"Connection error: {str(e)}", None
 
 def main():
     """Start the bot with proper verification and run it."""
     import asyncio
     
     # First check if the bot is healthy
-    is_healthy, message = check_bot_health()
+    is_healthy, message, bot_username = check_bot_health()
     
     if not is_healthy:
         logger.error(f"Bot health check failed: {message}")
@@ -257,6 +257,12 @@ def start_bot_thread():
     global bot_status
     try:
         bot_status["status_message"] = "Starting bot..."
+        
+        # Check bot health and get bot username
+        is_healthy, health_message, bot_username = check_bot_health()
+        if is_healthy and bot_username:
+            bot_status["bot_username"] = bot_username
+            logger.info(f"Bot username set to {bot_username}")
         
         # Use subprocess to run the bot in a separate process
         import subprocess

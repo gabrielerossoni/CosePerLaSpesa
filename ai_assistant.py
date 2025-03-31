@@ -26,7 +26,7 @@ class AIAssistant:
             messages: List of message dictionaries to send to the API
             
         Returns:
-            The response content from OpenAI
+            The response content from OpenAI or a fallback response if API is unavailable
         """
         if not self.api_key:
             return "L'assistente AI non è disponibile al momento. Controlla la chiave API."
@@ -49,6 +49,12 @@ class AIAssistant:
                     if response.status != 200:
                         error_text = await response.text()
                         logger.error(f"OpenAI API error: {response.status} - {error_text}")
+                        
+                        # Check for quota exceeded error (code 429)
+                        if response.status == 429 and "quota" in error_text.lower():
+                            logger.warning("OpenAI API quota exceeded, using fallback response")
+                            return self._get_fallback_response(messages)
+                        
                         return "Mi dispiace, c'è stato un errore nel contattare l'assistente AI. Riprova più tardi."
                     
                     response_data = await response.json()
@@ -56,6 +62,85 @@ class AIAssistant:
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {e}")
             return "Mi dispiace, c'è stato un errore nel contattare l'assistente AI. Riprova più tardi."
+    
+    def _get_fallback_response(self, messages):
+        """
+        Provide a fallback response when the OpenAI API is unavailable.
+        
+        Args:
+            messages: The messages that would have been sent to the API
+            
+        Returns:
+            A simple fallback response
+        """
+        # Check the system message to determine what type of request this is
+        system_content = ""
+        user_content = ""
+        for msg in messages:
+            if msg["role"] == "system":
+                system_content = msg["content"].lower()
+            elif msg["role"] == "user":
+                user_content = msg["content"]
+        
+        # Generate appropriate fallback responses based on the request type
+        if "suggerire" in system_content or "suggeri" in system_content:
+            return """🍎 Frutta di stagione - Completa la tua lista con prodotti freschi
+🧀 Formaggio - Un buon complemento per i tuoi pasti
+🍞 Pane fresco - Un alimento base per ogni dispensa
+🥛 Latte o alternative vegetali - Per colazione o ricette
+🧂 Spezie ed erbe - Per arricchire i sapori dei tuoi piatti
+
+⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+            
+        elif "categor" in system_content:
+            return """🍅 Frutta e Verdura:
+- Frutta di stagione
+- Verdure fresche
+
+🥩 Proteine:
+- Carne
+- Pesce
+- Legumi
+
+🧀 Latticini:
+- Latte
+- Formaggi
+- Yogurt
+
+🍝 Dispensa:
+- Pasta
+- Riso
+- Cereali
+
+⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+            
+        elif "pasti" in system_content or "cucina" in system_content and "piano" in system_content:
+            return """📅 Piano dei pasti semplificato:
+
+🌅 Colazione:
+- Cereali con latte/yogurt e frutta
+- Pane tostato con marmellata o miele
+
+🕛 Pranzo:
+- Pasta con verdure
+- Insalata mista con proteine
+
+🌙 Cena:
+- Proteine (carne/pesce/legumi) con contorno
+- Zuppa con pane
+
+⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+            
+        else:
+            return """Mi dispiace, l'assistente AI è temporaneamente limitato per motivi tecnici. Le funzionalità complete torneranno presto.
+
+Nel frattempo, ecco alcuni consigli generali:
+- Organizza la tua lista per categorie (frutta, verdura, carne, ecc.)
+- Controlla cosa hai già in dispensa prima di fare la spesa
+- Pianifica i pasti della settimana per evitare sprechi
+- Considera prodotti di stagione per qualità e convenienza
+
+⚠️ L'assistente tornerà completamente operativo al più presto."""
     
     async def get_suggestions(self, items):
         """
