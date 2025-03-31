@@ -29,7 +29,10 @@ class AIAssistant:
             The response content from OpenAI or a fallback response if API is unavailable
         """
         if not self.api_key:
+            logger.error("API key is not set!")
             return "L'assistente AI non è disponibile al momento. Controlla la chiave API."
+        
+        logger.info(f"OpenAI API key present, length: {len(self.api_key)}")
         
         headers = {
             "Content-Type": "application/json",
@@ -43,8 +46,11 @@ class AIAssistant:
             "max_tokens": 600
         }
         
+        logger.info(f"Sending request to OpenAI API with messages: {messages}")
+        
         try:
             async with aiohttp.ClientSession() as session:
+                logger.info(f"Calling OpenAI API at URL: {self.api_url}")
                 async with session.post(self.api_url, headers=headers, json=data) as response:
                     if response.status != 200:
                         error_text = await response.text()
@@ -55,13 +61,17 @@ class AIAssistant:
                             logger.warning("OpenAI API quota exceeded, using fallback response")
                             return self._get_fallback_response(messages)
                         
-                        return "Mi dispiace, c'è stato un errore nel contattare l'assistente AI. Riprova più tardi."
+                        # Use fallback for other API errors too
+                        logger.warning(f"Using fallback due to API error: {response.status}")
+                        return self._get_fallback_response(messages)
                     
+                    logger.info("Received successful response from OpenAI API")
                     response_data = await response.json()
                     return response_data["choices"][0]["message"]["content"]
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {e}")
-            return "Mi dispiace, c'è stato un errore nel contattare l'assistente AI. Riprova più tardi."
+            logger.warning("Using fallback due to exception")
+            return self._get_fallback_response(messages)
     
     def _get_fallback_response(self, messages):
         """
