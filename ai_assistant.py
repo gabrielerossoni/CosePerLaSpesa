@@ -3,11 +3,12 @@ import json
 import aiohttp
 import asyncio
 import logging
+from ai_fallback import LocalAI
 
 logger = logging.getLogger(__name__)
 
 class AIAssistant:
-    """Class to provide AI assistance for shopping lists using OpenAI."""
+    """Class to provide AI assistance for shopping lists using OpenAI or local fallback."""
     
     def __init__(self):
         """Initialize the AI assistant."""
@@ -17,6 +18,9 @@ class AIAssistant:
         
         # The endpoint for OpenAI API
         self.api_url = "https://api.openai.com/v1/chat/completions"
+        
+        # Initialize the local AI fallback
+        self.local_ai = LocalAI()
     
     async def _get_openai_response(self, messages):
         """
@@ -86,105 +90,86 @@ class AIAssistant:
                             except Exception as e:
                                 logger.error(f"Error with fallback model: {e}")
                             
-                            # Se anche il modello di fallback fallisce, usa la risposta di fallback statica
-                            fallback_response = self._get_fallback_response(messages)
-                            if "⚠️ Nota:" in fallback_response:
-                                fallback_response = fallback_response.replace(
-                                    "⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto.",
-                                    "⚠️ Nota: L'assistente AI ha raggiunto il limite di utilizzo. Le funzionalità complete torneranno disponibili quando la quota verrà ricaricata."
-                                )
-                            return fallback_response
+                            # Se anche il modello di fallback fallisce, usa il sistema di AI locale
+                            logger.warning("Using LocalAI for fallback")
+                            return self._get_local_ai_response(messages)
                         
-                        # Use fallback for other API errors
-                        logger.warning(f"Using fallback due to API error: {response.status}")
-                        return self._get_fallback_response(messages)
+                        # Use local AI for other API errors
+                        logger.warning(f"Using LocalAI due to API error: {response.status}")
+                        return self._get_local_ai_response(messages)
                     
                     logger.info(f"Received successful response from OpenAI API using {primary_model}")
                     response_data = await response.json()
                     return response_data["choices"][0]["message"]["content"]
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {e}")
-            logger.warning("Using fallback due to exception")
-            return self._get_fallback_response(messages)
+            logger.warning("Using LocalAI due to exception")
+            return self._get_local_ai_response(messages)
     
-    def _get_fallback_response(self, messages):
+    def _get_local_ai_response(self, messages):
         """
-        Provide a fallback response when the OpenAI API is unavailable.
+        Provide a response using the local AI system when external APIs are unavailable.
         
         Args:
             messages: The messages that would have been sent to the API
             
         Returns:
-            A simple fallback response
+            A response from the local AI system
         """
-        # Check the system message to determine what type of request this is
+        # Estrai il contenuto dei messaggi
         system_content = ""
         user_content = ""
+        items = []
+        question = ""
+        
+        # Parse i messaggi per identificare richiesta e contenuto
         for msg in messages:
             if msg["role"] == "system":
                 system_content = msg["content"].lower()
             elif msg["role"] == "user":
                 user_content = msg["content"]
+                
+                # Estrai elementi della lista della spesa dal contenuto utente
+                if "lista della spesa" in user_content and ":" in user_content:
+                    content_parts = user_content.split(":")
+                    if len(content_parts) >= 2:
+                        items_part = content_parts[1].split(".")[0].strip()
+                        items = [item.strip() for item in items_part.split(",")]
+                
+                # Estrai la domanda se presente
+                if "domanda è:" in user_content:
+                    question_parts = user_content.split("domanda è:")
+                    if len(question_parts) >= 2:
+                        question = question_parts[1].strip()
         
-        # Generate appropriate fallback responses based on the request type
+        logger.info(f"Using local AI system for response. Type identified from system content: {system_content[:50]}...")
+        
+        # Richiama la funzione appropriata in base al tipo di richiesta
         if "suggerire" in system_content or "suggeri" in system_content:
-            return """🍎 Frutta di stagione - Completa la tua lista con prodotti freschi
-🧀 Formaggio - Un buon complemento per i tuoi pasti
-🍞 Pane fresco - Un alimento base per ogni dispensa
-🥛 Latte o alternative vegetali - Per colazione o ricette
-🧂 Spezie ed erbe - Per arricchire i sapori dei tuoi piatti
-
-⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+            return self.local_ai.get_suggestions(items)
             
         elif "categor" in system_content:
-            return """🍅 Frutta e Verdura:
-- Frutta di stagione
-- Verdure fresche
-
-🥩 Proteine:
-- Carne
-- Pesce
-- Legumi
-
-🧀 Latticini:
-- Latte
-- Formaggi
-- Yogurt
-
-🍝 Dispensa:
-- Pasta
-- Riso
-- Cereali
-
-⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+            return self.local_ai.categorize_items(items)
             
-        elif "pasti" in system_content or "cucina" in system_content and "piano" in system_content:
-            return """📅 Piano dei pasti semplificato:
-
-🌅 Colazione:
-- Cereali con latte/yogurt e frutta
-- Pane tostato con marmellata o miele
-
-🕛 Pranzo:
-- Pasta con verdure
-- Insalata mista con proteine
-
-🌙 Cena:
-- Proteine (carne/pesce/legumi) con contorno
-- Zuppa con pane
-
-⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto."""
+        elif ("pasti" in system_content or "cucina" in system_content) and "piano" in system_content:
+            return self.local_ai.generate_meal_plan(items)
+            
+        elif "rispondi" in system_content or "domand" in system_content:
+            return self.local_ai.answer_question(items, question)
             
         else:
-            return """Mi dispiace, l'assistente AI è temporaneamente limitato per motivi tecnici. Le funzionalità complete torneranno presto.
+            # Risposta generica per richieste sconosciute
+            return """Benvenuto! Sono il tuo assistente della spesa locale.
+            
+Posso aiutarti a:
+- Organizzare la tua lista per categorie
+- Suggerire prodotti correlati
+- Creare piani dei pasti
+- Rispondere a domande sulla spesa e la cucina
 
-Nel frattempo, ecco alcuni consigli generali:
-- Organizza la tua lista per categorie (frutta, verdura, carne, ecc.)
-- Controlla cosa hai già in dispensa prima di fare la spesa
-- Pianifica i pasti della settimana per evitare sprechi
-- Considera prodotti di stagione per qualità e convenienza
+Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
 
-⚠️ L'assistente tornerà completamente operativo al più presto."""
+⚠️ Nota: Questo è un sistema AI locale che funziona senza connessione a internet. Non utilizza OpenAI al momento."""
     
     async def get_suggestions(self, items):
         """
