@@ -20,9 +20,62 @@ class ShoppingList:
             else:
                 self.lists[user_id] = items
         
+        # Ripulisci i dati corrotti
+        self._repair_corrupted_data()
+        
         # Save the converted data
         if self.lists and self.lists != lists_data:
             self.storage.save(self.lists)
+    
+    def _extract_real_name(self, name_dict):
+        """
+        Estrae il nome reale da un dizionario potenzialmente annidato.
+        
+        Args:
+            name_dict: Un dizionario che potrebbe contenere un nome annidato
+            
+        Returns:
+            Il nome reale come stringa
+        """
+        if not isinstance(name_dict, dict):
+            return str(name_dict)
+        
+        if "name" not in name_dict:
+            return ""
+        
+        if isinstance(name_dict["name"], dict):
+            return self._extract_real_name(name_dict["name"])
+        else:
+            return str(name_dict["name"])
+    
+    def _repair_corrupted_data(self):
+        """
+        Ripara i dati corrotti nelle liste.
+        """
+        for user_id, items in self.lists.items():
+            if not isinstance(items, list):
+                self.lists[user_id] = []
+                continue
+                
+            repaired_items = []
+            for item in items:
+                # Se l'elemento non è un dizionario, saltalo
+                if not isinstance(item, dict):
+                    continue
+                    
+                # Se name è un dizionario annidato, estraiamo il nome reale
+                if "name" in item and isinstance(item["name"], dict):
+                    real_name = self._extract_real_name(item["name"])
+                    if real_name:
+                        repaired_items.append({
+                            "name": real_name,
+                            "quantity": item.get("quantity", "1")
+                        })
+                # Se l'elemento ha una struttura valida, lo manteniamo
+                elif "name" in item and isinstance(item["name"], str):
+                    repaired_items.append(item)
+                    
+            self.lists[user_id] = repaired_items
     
     def add_item(self, user_id, item_text):
         """
@@ -79,9 +132,21 @@ class ShoppingList:
         
         # Check if the item already exists
         item_exists = False
-        for existing_item in self.lists[user_id]:
-            if existing_item["name"].lower() == item_name.lower():
-                existing_item["quantity"] = quantity  # Update quantity
+        for i, existing_item in enumerate(self.lists[user_id]):
+            # Verifica se l'elemento esiste già, gestendo sia il caso di "name" che è una stringa,
+            # sia il caso di "name" che è un dizionario (per proteggere da corruzione dati)
+            existing_name = existing_item.get("name", "")
+            if isinstance(existing_name, dict) and "name" in existing_name:
+                # Caso di corruzione dati, estrai il nome vero
+                real_name = self._extract_real_name(existing_name)
+                if real_name.lower() == item_name.lower():
+                    # Sostituisci completamente l'elemento corrotto
+                    self.lists[user_id][i] = {"name": item_name, "quantity": quantity}
+                    item_exists = True
+                    break
+            elif existing_name.lower() == item_name.lower():
+                # Caso normale, aggiorna la quantità
+                self.lists[user_id][i]["quantity"] = quantity
                 item_exists = True
                 break
         
