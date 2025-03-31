@@ -1,1 +1,1 @@
-web: gunicorn --bind 0.0.0.0:$PORT --reuse-port main:app
+web: python bot_runner.py & gunicorn --bind 0.0.0.0:$PORT --workers=2 --timeout=240 main:app

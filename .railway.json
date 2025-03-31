@@ -5,9 +5,10 @@
     "buildCommand": ""
   },
   "deploy": {
-    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --reuse-port main:app",
+    "startCommand": "python bot_runner.py & gunicorn --bind 0.0.0.0:$PORT --workers=2 --timeout=240 main:app",
     "healthcheckPath": "/status",
-    "healthcheckTimeout": 120,
-    "restartPolicyType": "ON_FAILURE"
+    "healthcheckTimeout": 240,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
   }
 }
