@@ -39,14 +39,17 @@ class AIAssistant:
             "Authorization": f"Bearer {self.api_key}"
         }
         
+        # Prima proviamo con gpt-4o
+        primary_model = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
+        
         data = {
-            "model": "gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+            "model": primary_model,
             "messages": messages,
             "temperature": 0.7,
             "max_tokens": 600
         }
         
-        logger.info(f"Sending request to OpenAI API with messages: {messages}")
+        logger.info(f"Sending request to OpenAI API with model {primary_model}")
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -58,14 +61,45 @@ class AIAssistant:
                         
                         # Check for quota exceeded error (code 429)
                         if response.status == 429 and "quota" in error_text.lower():
-                            logger.warning("OpenAI API quota exceeded, using fallback response")
-                            return self._get_fallback_response(messages)
+                            logger.warning(f"Quota exceeded for {primary_model}, trying fallback model gpt-3.5-turbo")
+                            
+                            # Prova con un modello di fallback (gpt-3.5-turbo) che costa meno
+                            fallback_model = "gpt-3.5-turbo"
+                            fallback_data = {
+                                "model": fallback_model,
+                                "messages": messages,
+                                "temperature": 0.7,
+                                "max_tokens": 300  # Ridotto per contenere i costi
+                            }
+                            
+                            try:
+                                async with session.post(self.api_url, headers=headers, json=fallback_data) as fallback_response:
+                                    if fallback_response.status == 200:
+                                        logger.info(f"Successfully used fallback model {fallback_model}")
+                                        fallback_response_data = await fallback_response.json()
+                                        content = fallback_response_data["choices"][0]["message"]["content"]
+                                        return content + f"\n\n⚠️ Nota: Utilizzato modello {fallback_model} invece di {primary_model} per motivi di quota."
+                                    else:
+                                        # Anche il modello di fallback ha fallito
+                                        fallback_error_text = await fallback_response.text()
+                                        logger.error(f"Fallback model also failed: {fallback_response.status} - {fallback_error_text}")
+                            except Exception as e:
+                                logger.error(f"Error with fallback model: {e}")
+                            
+                            # Se anche il modello di fallback fallisce, usa la risposta di fallback statica
+                            fallback_response = self._get_fallback_response(messages)
+                            if "⚠️ Nota:" in fallback_response:
+                                fallback_response = fallback_response.replace(
+                                    "⚠️ Nota: L'assistente AI è temporaneamente limitato. Le funzionalità complete torneranno presto.",
+                                    "⚠️ Nota: L'assistente AI ha raggiunto il limite di utilizzo. Le funzionalità complete torneranno disponibili quando la quota verrà ricaricata."
+                                )
+                            return fallback_response
                         
-                        # Use fallback for other API errors too
+                        # Use fallback for other API errors
                         logger.warning(f"Using fallback due to API error: {response.status}")
                         return self._get_fallback_response(messages)
                     
-                    logger.info("Received successful response from OpenAI API")
+                    logger.info(f"Received successful response from OpenAI API using {primary_model}")
                     response_data = await response.json()
                     return response_data["choices"][0]["message"]["content"]
         except Exception as e:
