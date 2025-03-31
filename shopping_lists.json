@@ -9,6 +9,21 @@
       "name": "mele",
       "quantity": "1",
       "category": "Frutta e Verdura"
+    },
+    {
+      "name": "banane",
+      "quantity": "1",
+      "category": "Frutta e Verdura"
+    },
+    {
+      "name": "tv",
+      "quantity": "1",
+      "category": "Altro"
+    },
+    {
+      "name": "caloriferi",
+      "quantity": "1",
+      "category": "Altro"
     }
   ],
   "592731075": [
@@ -27,6 +42,16 @@
   "6018751165": [
     {
       "name": "pane",
+      "quantity": "1",
+      "category": "Pane e Cereali"
+    },
+    {
+      "name": "latte",
+      "quantity": "1",
+      "category": "Latticini"
+    },
+    {
+      "name": "cracker",
       "quantity": "1",
       "category": "Pane e Cereali"
     }
