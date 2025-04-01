@@ -764,7 +764,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     # Create the Application with custom request handler
-    request = HTTPXRequest()  # No extra parameters
+    request = HTTPXRequest(connection_pool_size=8)  # Configure only essential parameters
     application = ApplicationBuilder().token(token).request(request).build()
     
     # Add conversation handlers
