@@ -58,14 +58,14 @@
   ],
   "user_984920043": [
     {
-      "name": "patate",
+      "name": "pasta",
       "quantity": "1",
-      "category": "Frutta e Verdura"
+      "category": "Pane e Cereali"
     },
     {
-      "name": "cioccolato",
+      "name": "ragu",
       "quantity": "1",
-      "category": "Bevande"
+      "category": "Altro"
     }
   ],
   "group_1001474091557": []

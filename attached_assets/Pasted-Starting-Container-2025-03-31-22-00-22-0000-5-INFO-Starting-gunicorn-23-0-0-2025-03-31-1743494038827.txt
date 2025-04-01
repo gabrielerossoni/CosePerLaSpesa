@@ -1,0 +1,97 @@
+Starting Container
+
+[2025-03-31 22:00:22 +0000] [5] [INFO] Starting gunicorn 23.0.0
+
+[2025-03-31 22:00:22 +0000] [5] [INFO] Listening at: http://0.0.0.0:8080 (5)
+
+[2025-03-31 22:00:22 +0000] [5] [INFO] Using worker: sync
+
+[2025-03-31 22:00:22 +0000] [6] [INFO] Booting worker with pid: 6
+
+[2025-03-31 22:00:23 +0000] [7] [INFO] Booting worker with pid: 7
+
+2025-03-31 22:00:24,947 - __main__ - INFO - Starting Telegram bot...
+
+2025-03-31 22:00:24,967 - __main__ - INFO - The bot is running. Please interact with it through Telegram.
+
+2025-03-31 22:00:25,066 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7311846333:AAGXqxFI-uD_sifT3GpSq6Ulo1Xkb1UbSx4/getMe "HTTP/1.1 200 OK"
+
+2025-03-31 22:00:25,068 - telegram.ext.Application - INFO - Application started
+
+2025-03-31 22:00:25,068 - __main__ - INFO - Bot is up and running!
+
+2025-03-31 22:00:25,495 - keep_alive - INFO - Starting keep-alive server on port 9393...
+
+2025-03-31 22:00:25,497 - keep_alive - INFO - Keep-alive server started
+
+ * Serving Flask app 'keep_alive'
+
+ * Debug mode: off
+
+2025-03-31 22:00:25,612 - werkzeug - INFO - WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+
+ * Running on all addresses (0.0.0.0)
+
+ * Running on http://127.0.0.1:9394
+
+ * Running on http://10.250.14.134:9394
+
+2025-03-31 22:00:25,612 - werkzeug - INFO - Press CTRL+C to quit
+
+2025-03-31 22:00:25,668 - keep_alive - INFO - Starting keep-alive server on port 9393...
+
+2025-03-31 22:00:25,669 - keep_alive - INFO - Keep-alive server started
+
+ * Serving Flask app 'keep_alive'
+
+ * Debug mode: off
+
+Address already in use
+
+Port 9394 is in use by another program. Either identify and stop that program, or start the server with a different port.
+
+2025-03-31 22:00:25,804 - main - INFO - Bot username set to @CosePerLaSpesaBot
+
+2025-03-31 22:00:25,932 - main - INFO - Bot username set to @CosePerLaSpesaBot
+
+2025-03-31 22:00:29,594 - main - ERROR - Bot process exited: Traceback (most recent call last):
+
+  File "/app/telegram_bot.py", line 767, in <module>
+
+    request = HTTPXRequest()  # No extra parameters
+
+              ^^^^^^^^^^^^^^
+
+  File "/opt/venv/lib/python3.12/site-packages/telegram/request/_httpxrequest.py", line 190, in __init__
+
+    self._client = self._build_client()
+
+                   ^^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/venv/lib/python3.12/site-packages/telegram/request/_httpxrequest.py", line 225, in _build_client
+
+    return httpx.AsyncClient(**self._client_kwargs)
+
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TypeError: AsyncClient.__init__() got an unexpected keyword argument 'proxy'
+
+ 
+
+2025-03-31 22:00:29,594 - main - INFO - Bot initialization completed
+
+2025-03-31 22:00:29,839 - main - ERROR - Bot process exited: Traceback (most recent call last):
+
+  File "/app/telegram_bot.py", line 767, in <module>
+
+    request = HTTPXRequest()  # No extra parameters
+
+              ^^^^^^^^^^^^^^
+
+  File "/opt/venv/lib/python3.12/site-packages/telegram/request/_httpxrequest.py", line 190, in __init__
+
+    self._client = self._build_client()
+
+                   ^^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/venv/lib/python3.12/site-packages/telegram/request/_httpxrequest.py", line 225, in _build_client
