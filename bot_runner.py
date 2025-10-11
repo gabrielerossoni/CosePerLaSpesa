@@ -168,7 +168,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     for category, cat_items in sorted(categories.items()):
         # Add category header with emoji
         emoji = get_category_emoji(category)
-        message += f"*{emoji} {category}*\n"
+        message += f"{emoji} {category}\n"
         
         # Add items in this category
         for item in cat_items:

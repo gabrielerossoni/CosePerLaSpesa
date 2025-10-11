@@ -61,6 +61,11 @@
       "name": "latte",
       "quantity": "1",
       "category": "Latticini"
+    },
+    {
+      "name": "yogurt greco",
+      "quantity": "1",
+      "category": "Latticini"
     }
   ],
   "group_1001474091557": []

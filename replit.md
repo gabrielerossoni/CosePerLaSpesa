@@ -37,21 +37,21 @@ Preferred communication style: Simple, everyday language.
 
 **Problem**: Need AI features (suggestions, categorization, meal planning) with resilience against API failures or quota limits.
 
-**Solution**: Multi-tier fallback system with primary and secondary AI providers.
+**Solution**: Multi-tier fallback system with primary and secondary AI providers via OpenRouter.
 
-- **Primary**: OpenAI GPT-4o API for intelligent responses
-- **Secondary**: OpenAI GPT-3.5-turbo as cost-effective fallback
+- **Primary**: DeepSeek V3.1 (free) via OpenRouter for intelligent responses
+- **Secondary**: Llama 3.1 8B (free) via OpenRouter as fallback
 - **Tertiary**: Local rule-based AI (`ai_fallback.py`) with hardcoded suggestions and templates
 
 **Architecture**:
 ```
 AIAssistant
-├── _get_openai_response() → Try GPT-4o
-│   └── Fallback to GPT-3.5-turbo
+├── _get_openai_response() → Try DeepSeek V3.1
+│   └── Fallback to Llama 3.1 8B
 └── LocalAI → Pattern-based responses
 ```
 
-**Rationale**: Ensures the bot remains functional even when external APIs are unavailable or rate-limited. The local fallback provides basic but reliable functionality.
+**Rationale**: Using OpenRouter provides access to free, high-quality models while ensuring the bot remains functional even when external APIs are unavailable or rate-limited. The local fallback provides basic but reliable functionality.
 
 ## Shopping List Management
 
@@ -81,7 +81,9 @@ AIAssistant
 
 **Constants Management**: Centralized message templates and UI strings in `constants.py` for easy localization and maintenance.
 
-**Rationale**: Accommodates different user preferences and skill levels. Buttons reduce typing for mobile users while commands provide speed for experienced users.
+**Message Formatting**: Text formatting uses emoji indicators (📍 for list type) instead of Markdown to avoid display issues with special characters like underscores and asterisks.
+
+**Rationale**: Accommodates different user preferences and skill levels. Buttons reduce typing for mobile users while commands provide speed for experienced users. Clean text formatting ensures messages display correctly on all Telegram clients.
 
 # External Dependencies
 
@@ -90,11 +92,11 @@ AIAssistant
 - **Purpose**: Core bot framework for handling updates, commands, callbacks, and conversations
 - **Integration**: Async/await pattern with ApplicationBuilder and various handler types
 
-## OpenAI API
-- **Models**: GPT-4o (primary), GPT-3.5-turbo (fallback)
-- **Endpoint**: `https://api.openai.com/v1/chat/completions`
+## OpenRouter API
+- **Models**: DeepSeek V3.1 (primary, free), Llama 3.1 8B (fallback, free)
+- **Endpoint**: `https://openrouter.ai/api/v1/chat/completions`
 - **Purpose**: AI-powered suggestions, categorization, meal planning, and conversational assistance
-- **Authentication**: Bearer token via `OPENAI_API_KEY` environment variable
+- **Authentication**: Bearer token via `OPENROUTER_API_KEY` environment variable
 
 ## Web Server Stack
 - **Flask**: Web framework for monitoring dashboard and health endpoints
@@ -109,7 +111,7 @@ AIAssistant
 
 ## Environment Variables
 - `TELEGRAM_TOKEN`: Bot authentication token from BotFather
-- `OPENAI_API_KEY`: OpenAI API authentication key
+- `OPENROUTER_API_KEY`: OpenRouter API authentication key for AI features
 - `SESSION_SECRET`: Flask session encryption key
 - `PORT`: Server port (auto-assigned by Railway)
 
