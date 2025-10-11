@@ -45,8 +45,8 @@ class AIAssistant:
             "X-Title": "Telegram Shopping Bot"  # Optional
         }
         
-        # Usa DeepSeek V3 come modello primario
-        primary_model = "deepseek/deepseek-chat"  # DeepSeek V3 via OpenRouter
+        # Usa DeepSeek V3.1 gratuito come modello primario
+        primary_model = "deepseek/deepseek-chat-v3.1:free"  # DeepSeek V3.1 gratuito via OpenRouter
         
         data = {
             "model": primary_model,
