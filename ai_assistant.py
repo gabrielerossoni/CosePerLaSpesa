@@ -8,43 +8,45 @@ from ai_fallback import LocalAI
 logger = logging.getLogger(__name__)
 
 class AIAssistant:
-    """Class to provide AI assistance for shopping lists using OpenAI or local fallback."""
+    """Class to provide AI assistance for shopping lists using DeepSeek V3 via OpenRouter or local fallback."""
     
     def __init__(self):
         """Initialize the AI assistant."""
-        self.api_key = os.environ.get("OPENAI_API_KEY")
+        self.api_key = os.environ.get("OPENROUTER_API_KEY")
         if not self.api_key:
-            logger.warning("OPENAI_API_KEY environment variable not set!")
+            logger.warning("OPENROUTER_API_KEY environment variable not set!")
         
-        # The endpoint for OpenAI API
-        self.api_url = "https://api.openai.com/v1/chat/completions"
+        # The endpoint for OpenRouter API
+        self.api_url = "https://openrouter.ai/api/v1/chat/completions"
         
         # Initialize the local AI fallback
         self.local_ai = LocalAI()
     
     async def _get_openai_response(self, messages):
         """
-        Get a response from OpenAI API.
+        Get a response from DeepSeek V3 via OpenRouter API.
         
         Args:
             messages: List of message dictionaries to send to the API
             
         Returns:
-            The response content from OpenAI or a fallback response if API is unavailable
+            The response content from DeepSeek V3 or a fallback response if API is unavailable
         """
         if not self.api_key:
             logger.error("API key is not set!")
             return "L'assistente AI non è disponibile al momento. Controlla la chiave API."
         
-        logger.info(f"OpenAI API key present, length: {len(self.api_key)}")
+        logger.info(f"OpenRouter API key present, length: {len(self.api_key)}")
         
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"Bearer {self.api_key}",
+            "HTTP-Referer": "https://replit.com",  # Optional but recommended for OpenRouter
+            "X-Title": "Telegram Shopping Bot"  # Optional
         }
         
-        # Prima proviamo con gpt-4o
-        primary_model = "gpt-4o"  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
+        # Usa DeepSeek V3 come modello primario
+        primary_model = "deepseek/deepseek-chat"  # DeepSeek V3 via OpenRouter
         
         data = {
             "model": primary_model,
@@ -53,22 +55,22 @@ class AIAssistant:
             "max_tokens": 600
         }
         
-        logger.info(f"Sending request to OpenAI API with model {primary_model}")
+        logger.info(f"Sending request to OpenRouter API with model {primary_model}")
         
         try:
             async with aiohttp.ClientSession() as session:
-                logger.info(f"Calling OpenAI API at URL: {self.api_url}")
+                logger.info(f"Calling OpenRouter API at URL: {self.api_url}")
                 async with session.post(self.api_url, headers=headers, json=data) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"OpenAI API error: {response.status} - {error_text}")
+                        logger.error(f"OpenRouter API error: {response.status} - {error_text}")
                         
-                        # Check for quota exceeded error (code 429)
-                        if response.status == 429 and "quota" in error_text.lower():
-                            logger.warning(f"Quota exceeded for {primary_model}, trying fallback model gpt-3.5-turbo")
+                        # Check for quota exceeded or rate limit error (code 429)
+                        if response.status == 429:
+                            logger.warning(f"Rate limit or quota exceeded for {primary_model}, trying fallback model")
                             
-                            # Prova con un modello di fallback (gpt-3.5-turbo) che costa meno
-                            fallback_model = "gpt-3.5-turbo"
+                            # Prova con un modello di fallback più economico (Llama o Mistral via OpenRouter)
+                            fallback_model = "meta-llama/llama-3.1-8b-instruct:free"
                             fallback_data = {
                                 "model": fallback_model,
                                 "messages": messages,
@@ -82,7 +84,7 @@ class AIAssistant:
                                         logger.info(f"Successfully used fallback model {fallback_model}")
                                         fallback_response_data = await fallback_response.json()
                                         content = fallback_response_data["choices"][0]["message"]["content"]
-                                        return content + f"\n\n⚠️ Nota: Utilizzato modello {fallback_model} invece di {primary_model} per motivi di quota."
+                                        return content + f"\n\n⚠️ Nota: Utilizzato modello alternativo invece di DeepSeek V3."
                                     else:
                                         # Anche il modello di fallback ha fallito
                                         fallback_error_text = await fallback_response.text()
@@ -98,11 +100,11 @@ class AIAssistant:
                         logger.warning(f"Using LocalAI due to API error: {response.status}")
                         return self._get_local_ai_response(messages)
                     
-                    logger.info(f"Received successful response from OpenAI API using {primary_model}")
+                    logger.info(f"Received successful response from OpenRouter API using {primary_model}")
                     response_data = await response.json()
                     return response_data["choices"][0]["message"]["content"]
         except Exception as e:
-            logger.error(f"Error calling OpenAI API: {e}")
+            logger.error(f"Error calling OpenRouter API: {e}")
             logger.warning("Using LocalAI due to exception")
             return self._get_local_ai_response(messages)
     
