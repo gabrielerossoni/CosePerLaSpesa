@@ -19,7 +19,6 @@ from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup,
     ReplyKeyboardRemove, KeyboardButton
 )
-from telegram.constants import ParseMode
 
 # Set up logging
 logging.basicConfig(
@@ -93,10 +92,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a help message when the /aiuto command is issued."""
-    await update.message.reply_text(
-        HELP_MSG,
-        parse_mode=ParseMode.MARKDOWN
-    )
+    await update.message.reply_text(HELP_MSG)
 
 # Conversation handler states
 async def start_adding_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -169,9 +165,9 @@ async def process_add_item(update: Update, context: ContextTypes.DEFAULT_TYPE, i
     if success:
         # Aggiungi emoji per la categoria
         category_emoji = get_category_emoji(category)
-        reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity) + f"\n{category_emoji} Categoria: *{category}*"
+        reply_text = ITEM_ADDED_MSG.format(item=item_name, quantity=quantity) + f"\n{category_emoji} Categoria: {category}"
         # Aggiungi l'informazione sul tipo di lista
-        reply_text += f"\n\n_{list_type}_"
+        reply_text += f"\n\n📍 {list_type}"
     else:
         reply_text = "Non sono riuscito ad aggiungere l'articolo. Riprova."
     
@@ -209,7 +205,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Get list type (group or personal)
     list_type = shopping_list.get_list_type(chat_id)
-    message_text = f"*{LIST_HEADER_MSG}*\n_{list_type}_\n\n"
+    message_text = f"📋 {LIST_HEADER_MSG}\n📍 {list_type}\n\n"
     keyboard = []
     
     # Group items by category
@@ -235,7 +231,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Display items grouped by category
     for category in sorted_categories:
         category_emoji = get_category_emoji(category)
-        message_text += f"\n*{category_emoji} {category}*\n"
+        message_text += f"\n{category_emoji} {category}\n"
         
         for item in categories[category]:
             index = item["index"]
@@ -263,8 +259,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     await message.reply_text(
         message_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode=ParseMode.MARKDOWN
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def start_removing_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -368,7 +363,7 @@ async def process_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE
             
             # Get list type (group or personal)
             list_type = shopping_list.get_list_type(chat_id)
-            reply_text += f"\n\n_{list_type}_"
+            reply_text += f"\n\n📍 {list_type}"
             
             # Reply based on the type of update
             if update.callback_query:
@@ -376,16 +371,14 @@ async def process_remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE
                     reply_text,
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
-                    ]]),
-                    parse_mode=ParseMode.MARKDOWN
+                    ]])
                 )
             else:
                 await update.message.reply_text(
                     reply_text,
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("📋 Mostra Lista", callback_data=CB_SHOW)
-                    ]]),
-                    parse_mode=ParseMode.MARKDOWN
+                    ]])
                 )
         else:
             reply_text = "Numero non valido. Usa /lista per vedere i numeri degli articoli."
@@ -496,23 +489,21 @@ async def clear_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         if "confirm" in query.data:
             # User confirmed clearing the list
             shopping_list.clear_list(chat_id, user_id)
-            message_text = f"{LIST_CLEARED_MSG}\n\n_{list_type}_"
-            await query.message.edit_text(message_text, parse_mode=ParseMode.MARKDOWN)
+            message_text = f"{LIST_CLEARED_MSG}\n\n📍 {list_type}"
+            await query.message.edit_text(message_text)
         else:
             # Ask for confirmation
-            message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n_{list_type}_"
+            message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n📍 {list_type}"
             await query.message.edit_text(
                 message_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode=ParseMode.MARKDOWN
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
     else:
         # Ask for confirmation
-        message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n_{list_type}_"
+        message_text = f"Sei sicuro di voler svuotare l'intera lista della spesa?\n\n📍 {list_type}"
         await update.message.reply_text(
             message_text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode=ParseMode.MARKDOWN
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
 async def cancel_operation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -550,7 +541,6 @@ async def suggest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await status_message.delete()
         await message.reply_text(
             SUGGEST_RESPONSE_MSG.format(suggestions=suggestions),
-            parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("➕ Aggiungi alla lista", callback_data=CB_ADD)],
                 [InlineKeyboardButton("📋 Mostra lista", callback_data=CB_SHOW)]

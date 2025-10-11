@@ -69,8 +69,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Get list type (group or personal)
     list_type = shopping_list.get_list_type(chat_id)
     
-    message = f"{START_MSG}\n\n_{list_type}_"
-    await update.message.reply_text(message, parse_mode="Markdown")
+    message = f"{START_MSG}\n\n📍 {list_type}"
+    await update.message.reply_text(message)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a help message when the /aiuto command is issued."""
@@ -79,8 +79,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # Get list type (group or personal)
     list_type = shopping_list.get_list_type(chat_id)
     
-    message = f"{HELP_MSG}\n\n_{list_type}_"
-    await update.message.reply_text(message, parse_mode="Markdown")
+    message = f"{HELP_MSG}\n\n📍 {list_type}"
+    await update.message.reply_text(message)
 
 async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add an item to the shopping list."""
@@ -91,8 +91,8 @@ async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     list_type = shopping_list.get_list_type(chat_id)
     
     if not context.args:
-        message = f"Per favore, specifica un articolo da aggiungere. Esempio: /aggiungi pane\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"Per favore, specifica un articolo da aggiungere. Esempio: /aggiungi pane\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     item = " ".join(context.args)
@@ -100,13 +100,13 @@ async def add_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     if success:
         if quantity:
-            message = f"{ITEM_ADDED_MSG.format(item=item_name)} ({quantity})\n\n_{list_type}_"
+            message = f"{ITEM_ADDED_MSG.format(item=item_name)} ({quantity})\n\n📍 {list_type}"
         else:
-            message = f"{ITEM_ADDED_MSG.format(item=item_name)}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+            message = f"{ITEM_ADDED_MSG.format(item=item_name)}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
     else:
-        message = f"Non sono riuscito ad aggiungere l'articolo.\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"Non sono riuscito ad aggiungere l'articolo.\n\n📍 {list_type}"
+        await update.message.reply_text(message)
 
 async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display the current shopping list."""
@@ -118,8 +118,8 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     list_type = shopping_list.get_list_type(chat_id)
     
     if not items:
-        message = f"{LIST_EMPTY_MSG}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"{LIST_EMPTY_MSG}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     # Organize items by category with emojis
@@ -136,7 +136,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         categories[category].append(item_text)
     
     # Create the formatted message with categories
-    message = f"{LIST_HEADER_MSG}\n\n"
+    message = f"📋 {LIST_HEADER_MSG}\n📍 {list_type}\n\n"
     
     # First get all categories and sort them
     sorted_categories = sorted(categories.keys())
@@ -145,7 +145,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     for i, category in enumerate(sorted_categories):
         # Get emoji for category
         emoji = get_category_emoji(category)
-        message += f"{emoji} *{category}*\n"
+        message += f"{emoji} {category}\n"
         
         # List items in this category with their index in the main list
         for j, item_text in enumerate(categories[category]):
@@ -163,10 +163,7 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         message += "\n"
     
-    # Add list type at the end
-    message += f"_{list_type}_"
-    
-    await update.message.reply_text(message, parse_mode="Markdown")
+    await update.message.reply_text(message)
 
 async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove an item from the shopping list."""
@@ -177,8 +174,8 @@ async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     list_type = shopping_list.get_list_type(chat_id)
     
     if not context.args:
-        message = f"Per favore, specifica il numero dell'articolo da rimuovere. Esempio: /rimuovi 1\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"Per favore, specifica il numero dell'articolo da rimuovere. Esempio: /rimuovi 1\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     try:
@@ -186,14 +183,14 @@ async def remove_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         removed_item = shopping_list.remove_item(chat_id, index, user_id)
         
         if removed_item:
-            message = f"{ITEM_REMOVED_MSG.format(item=removed_item)}\n\n_{list_type}_"
-            await update.message.reply_text(message, parse_mode="Markdown")
+            message = f"{ITEM_REMOVED_MSG.format(item=removed_item)}\n\n📍 {list_type}"
+            await update.message.reply_text(message)
         else:
-            message = f"Non ho trovato questo articolo nella tua lista.\n\n_{list_type}_"
-            await update.message.reply_text(message, parse_mode="Markdown")
+            message = f"Non ho trovato questo articolo nella tua lista.\n\n📍 {list_type}"
+            await update.message.reply_text(message)
     except (ValueError, IndexError):
-        message = f"Per favore, inserisci un numero valido. Usa /lista per vedere i numeri degli articoli.\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"Per favore, inserisci un numero valido. Usa /lista per vedere i numeri degli articoli.\n\n📍 {list_type}"
+        await update.message.reply_text(message)
 
 async def clear_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clear the entire shopping list."""
@@ -204,8 +201,8 @@ async def clear_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     list_type = shopping_list.get_list_type(chat_id)
     
     shopping_list.clear_list(chat_id, user_id)
-    message = f"{LIST_CLEARED_MSG}\n\n_{list_type}_"
-    await update.message.reply_text(message, parse_mode="Markdown")
+    message = f"{LIST_CLEARED_MSG}\n\n📍 {list_type}"
+    await update.message.reply_text(message)
 
 async def suggest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Get AI-powered suggestions based on the current shopping list."""
@@ -218,8 +215,8 @@ async def suggest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     list_type = shopping_list.get_list_type(chat_id)
     
     if not items:
-        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere suggerimenti!\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere suggerimenti!\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     await update.message.reply_text("Sto pensando a dei suggerimenti per te... 🧠")
@@ -227,8 +224,8 @@ async def suggest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         # Get suggestions from AI assistant
         suggestions = await ai_assistant.get_suggestions(item_names)
-        message = f"{SUGGEST_RESPONSE_MSG.format(suggestions=suggestions)}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"{SUGGEST_RESPONSE_MSG.format(suggestions=suggestions)}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in suggest command: {e}")
         await update.message.reply_text(ERROR_MSG)
@@ -246,13 +243,13 @@ async def ai_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = " ".join(context.args) if context.args else ""
     
     if not query:
-        message = f"Cosa vuoi sapere sulla tua lista della spesa? Esempio: /ai Come posso usare questi ingredienti per una cena?\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"Cosa vuoi sapere sulla tua lista della spesa? Esempio: /ai Come posso usare questi ingredienti per una cena?\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     if not items:
-        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere aiuto all'IA!\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere aiuto all'IA!\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     await update.message.reply_text("Sto analizzando la tua richiesta... 🧠")
@@ -260,8 +257,8 @@ async def ai_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         # Get AI response
         response = await ai_assistant.answer_question(item_names, query)
-        message = f"{response}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"{response}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in ai_help command: {e}")
         await update.message.reply_text(ERROR_MSG)
@@ -277,8 +274,8 @@ async def categorize(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     list_type = shopping_list.get_list_type(chat_id)
     
     if not items:
-        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere una categorizzazione!\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere una categorizzazione!\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     await update.message.reply_text("Sto organizzando la tua lista per categorie... 🧠")
@@ -286,8 +283,8 @@ async def categorize(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     try:
         # Categorize items
         categorized = await ai_assistant.categorize_items(item_names)
-        message = f"{categorized}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"{categorized}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in categorize command: {e}")
         await update.message.reply_text(ERROR_MSG)
@@ -303,8 +300,8 @@ async def meal_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     list_type = shopping_list.get_list_type(chat_id)
     
     if not items:
-        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere un piano dei pasti!\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"La tua lista della spesa è vuota. Aggiungi qualche articolo prima di chiedere un piano dei pasti!\n\n📍 {list_type}"
+        await update.message.reply_text(message)
         return
     
     await update.message.reply_text("Sto preparando un piano dei pasti per te... 🧠")
@@ -312,8 +309,8 @@ async def meal_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         # Generate meal plan
         meal_plan_text = await ai_assistant.generate_meal_plan(item_names)
-        message = f"{meal_plan_text}\n\n_{list_type}_"
-        await update.message.reply_text(message, parse_mode="Markdown")
+        message = f"{meal_plan_text}\n\n📍 {list_type}"
+        await update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in meal_plan command: {e}")
         await update.message.reply_text(ERROR_MSG)
