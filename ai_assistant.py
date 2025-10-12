@@ -7,114 +7,104 @@ from ai_fallback import LocalAI
 
 logger = logging.getLogger(__name__)
 
+
 class AIAssistant:
-    """Class to provide AI assistance for shopping lists using DeepSeek V3 via OpenRouter or local fallback."""
-    
+    """Class to provide AI assistance for shopping lists using GitHub Models API or local fallback."""
+
     def __init__(self):
         """Initialize the AI assistant."""
-        self.api_key = os.environ.get("OPENROUTER_API_KEY")
+        # GitHub usa GITHUB_TOKEN come variabile d'ambiente
+        self.api_key = os.environ.get("GITHUB_TOKEN")
         if not self.api_key:
-            logger.warning("OPENROUTER_API_KEY environment variable not set!")
-        
-        # The endpoint for OpenRouter API
-        self.api_url = "https://openrouter.ai/api/v1/chat/completions"
-        
+            logger.warning("GITHUB_TOKEN environment variable not set!")
+
+        # The endpoint for GitHub Models API (base_url corretto)
+        self.api_url = "https://models.github.ai/inference/chat/completions"
+
         # Initialize the local AI fallback
         self.local_ai = LocalAI()
-    
+
     async def _get_openai_response(self, messages):
         """
-        Get a response from DeepSeek V3 via OpenRouter API.
-        
+        Get a response from GitHub Models API.
+
         Args:
             messages: List of message dictionaries to send to the API
-            
+
         Returns:
-            The response content from DeepSeek V3 or a fallback response if API is unavailable
+            The response content from the API or a fallback response if API is unavailable
         """
         if not self.api_key:
             logger.error("API key is not set!")
             return "L'assistente AI non è disponibile al momento. Controlla la chiave API."
-        
-        logger.info(f"OpenRouter API key present, length: {len(self.api_key)}")
-        
+
+        logger.info(f"GitHub API key present, length: {len(self.api_key)}")
+
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "https://replit.com",  # Optional but recommended for OpenRouter
-            "X-Title": "Telegram Shopping Bot"  # Optional
+            "Authorization": f"Bearer {self.api_key}"
         }
-        
-        # Usa DeepSeek V3.1 gratuito come modello primario
-        primary_model = "deepseek/deepseek-chat-v3.1:free"  # DeepSeek V3.1 gratuito via OpenRouter
-        
+
+        # GitHub Models richiede il prefisso del provider nel nome del modello
+        primary_model = "openai/gpt-4o-mini"  # Modello economico e veloce
+
         data = {
             "model": primary_model,
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 600
+            "max_tokens": 600,
+            "top_p": 1
         }
-        
-        logger.info(f"Sending request to OpenRouter API with model {primary_model}")
-        
+
+        logger.info(
+            f"Sending request to GitHub Models API with model {primary_model}")
+
         try:
             async with aiohttp.ClientSession() as session:
-                logger.info(f"Calling OpenRouter API at URL: {self.api_url}")
-                async with session.post(self.api_url, headers=headers, json=data) as response:
+                logger.info(
+                    f"Calling GitHub Models API at URL: {self.api_url}")
+                async with session.post(self.api_url,
+                                        headers=headers,
+                                        json=data) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"OpenRouter API error: {response.status} - {error_text}")
-                        
+                        logger.error(
+                            f"GitHub Models API error: {response.status} - {error_text}"
+                        )
+
                         # Check for quota exceeded or rate limit error (code 429)
                         if response.status == 429:
-                            logger.warning(f"Rate limit or quota exceeded for {primary_model}, trying fallback model")
-                            
-                            # Prova con un modello di fallback più economico (Llama o Mistral via OpenRouter)
-                            fallback_model = "meta-llama/llama-3.1-8b-instruct:free"
-                            fallback_data = {
-                                "model": fallback_model,
-                                "messages": messages,
-                                "temperature": 0.7,
-                                "max_tokens": 300  # Ridotto per contenere i costi
-                            }
-                            
-                            try:
-                                async with session.post(self.api_url, headers=headers, json=fallback_data) as fallback_response:
-                                    if fallback_response.status == 200:
-                                        logger.info(f"Successfully used fallback model {fallback_model}")
-                                        fallback_response_data = await fallback_response.json()
-                                        content = fallback_response_data["choices"][0]["message"]["content"]
-                                        return content + f"\n\n⚠️ Nota: Utilizzato modello alternativo invece di DeepSeek V3."
-                                    else:
-                                        # Anche il modello di fallback ha fallito
-                                        fallback_error_text = await fallback_response.text()
-                                        logger.error(f"Fallback model also failed: {fallback_response.status} - {fallback_error_text}")
-                            except Exception as e:
-                                logger.error(f"Error with fallback model: {e}")
-                            
-                            # Se anche il modello di fallback fallisce, usa il sistema di AI locale
+                            logger.warning(
+                                f"Rate limit or quota exceeded for {primary_model}"
+                            )
+
+                            # Usa il sistema di AI locale come fallback
                             logger.warning("Using LocalAI for fallback")
                             return self._get_local_ai_response(messages)
-                        
+
                         # Use local AI for other API errors
-                        logger.warning(f"Using LocalAI due to API error: {response.status}")
+                        logger.warning(
+                            f"Using LocalAI due to API error: {response.status}"
+                        )
                         return self._get_local_ai_response(messages)
-                    
-                    logger.info(f"Received successful response from OpenRouter API using {primary_model}")
+
+                    logger.info(
+                        f"Received successful response from GitHub Models API using {primary_model}"
+                    )
                     response_data = await response.json()
                     return response_data["choices"][0]["message"]["content"]
         except Exception as e:
-            logger.error(f"Error calling OpenRouter API: {e}")
+            logger.error(f"Error calling GitHub Models API: {e}")
             logger.warning("Using LocalAI due to exception")
             return self._get_local_ai_response(messages)
-    
+
     def _get_local_ai_response(self, messages):
         """
         Provide a response using the local AI system when external APIs are unavailable.
-        
+
         Args:
             messages: The messages that would have been sent to the API
-            
+
         Returns:
             A response from the local AI system
         """
@@ -123,46 +113,51 @@ class AIAssistant:
         user_content = ""
         items = []
         question = ""
-        
+
         # Parse i messaggi per identificare richiesta e contenuto
         for msg in messages:
             if msg["role"] == "system":
                 system_content = msg["content"].lower()
             elif msg["role"] == "user":
                 user_content = msg["content"]
-                
+
                 # Estrai elementi della lista della spesa dal contenuto utente
                 if "lista della spesa" in user_content and ":" in user_content:
                     content_parts = user_content.split(":")
                     if len(content_parts) >= 2:
                         items_part = content_parts[1].split(".")[0].strip()
-                        items = [item.strip() for item in items_part.split(",")]
-                
+                        items = [
+                            item.strip() for item in items_part.split(",")
+                        ]
+
                 # Estrai la domanda se presente
                 if "domanda è:" in user_content:
                     question_parts = user_content.split("domanda è:")
                     if len(question_parts) >= 2:
                         question = question_parts[1].strip()
-        
-        logger.info(f"Using local AI system for response. Type identified from system content: {system_content[:50]}...")
-        
+
+        logger.info(
+            f"Using local AI system for response. Type identified from system content: {system_content[:50]}..."
+        )
+
         # Richiama la funzione appropriata in base al tipo di richiesta
         if "suggerire" in system_content or "suggeri" in system_content:
             return self.local_ai.get_suggestions(items)
-            
+
         elif "categor" in system_content:
             return self.local_ai.categorize_items(items)
-            
-        elif ("pasti" in system_content or "cucina" in system_content) and "piano" in system_content:
+
+        elif ("pasti" in system_content
+              or "cucina" in system_content) and "piano" in system_content:
             return self.local_ai.generate_meal_plan(items)
-            
+
         elif "rispondi" in system_content or "domand" in system_content:
             return self.local_ai.answer_question(items, question)
-            
+
         else:
             # Risposta generica per richieste sconosciute
             return """Benvenuto! Sono il tuo assistente della spesa locale.
-            
+
 Posso aiutarti a:
 - Organizzare la tua lista per categorie
 - Suggerire prodotti correlati
@@ -171,15 +166,15 @@ Posso aiutarti a:
 
 Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
 
-⚠️ Nota: Questo è un sistema AI locale che funziona senza connessione a internet. Non utilizza OpenAI al momento."""
-    
+⚠️ Nota: Questo è un sistema AI locale che funziona senza connessione a internet. Non utilizza l'API esterna al momento."""
+
     async def get_suggestions(self, items):
         """
         Get suggestions for additional items based on the current shopping list.
-        
+
         Args:
             items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
-            
+
         Returns:
             A string with suggestions
         """
@@ -187,29 +182,38 @@ Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
         if items and isinstance(items, list):
             if isinstance(items[0], dict) and "name" in items[0]:
                 # Format items with quantities for better context
-                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+                formatted_items = [
+                    f"{item['name']} ({item['quantity']})" for item in items
+                ]
             else:
                 # Already a list of strings
                 formatted_items = items
         else:
             formatted_items = []
-            
+
         item_list = ", ".join(formatted_items)
-        
-        messages = [
-            {"role": "system", "content": "Sei un assistente italiano esperto in spesa e cucina. Devi suggerire 3-5 prodotti correlati basandoti sulla lista della spesa dell'utente. Ogni suggerimento deve essere accompagnato da una breve motivazione e un emoji pertinente. Le risposte devono essere in italiano."},
-            {"role": "user", "content": f"Ecco la mia lista della spesa: {item_list}. Cosa altro potrei aggiungere?"}
-        ]
-        
+
+        messages = [{
+            "role":
+            "system",
+            "content":
+            "Sei un assistente italiano esperto in spesa e cucina. Devi suggerire 3-5 prodotti correlati basandoti sulla lista della spesa dell'utente. Ogni suggerimento deve essere accompagnato da una breve motivazione e un emoji pertinente. Le risposte devono essere in italiano."
+        }, {
+            "role":
+            "user",
+            "content":
+            f"Ecco la mia lista della spesa: {item_list}. Cosa altro potrei aggiungere?"
+        }]
+
         return await self._get_openai_response(messages)
-    
+
     async def categorize_items(self, items):
         """
         Categorize the items in the shopping list.
-        
+
         Args:
             items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
-            
+
         Returns:
             A string with categorized items
         """
@@ -217,30 +221,39 @@ Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
         if items and isinstance(items, list):
             if isinstance(items[0], dict) and "name" in items[0]:
                 # Format items with quantities for better context
-                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+                formatted_items = [
+                    f"{item['name']} ({item['quantity']})" for item in items
+                ]
             else:
                 # Already a list of strings
                 formatted_items = items
         else:
             formatted_items = []
-        
+
         item_list = ", ".join(formatted_items)
-        
-        messages = [
-            {"role": "system", "content": "Sei un assistente italiano esperto in spesa. Devi organizzare la lista della spesa dell'utente in categorie logiche (come 'Frutta e Verdura', 'Latticini', 'Carne', ecc). Formula la risposta come un elenco ordinato per categorie, con emoji appropriate per ogni categoria. Le risposte devono essere in italiano."},
-            {"role": "user", "content": f"Ecco la mia lista della spesa: {item_list}. Organizzala in categorie per me."}
-        ]
-        
+
+        messages = [{
+            "role":
+            "system",
+            "content":
+            "Sei un assistente italiano esperto in spesa. Devi organizzare la lista della spesa dell'utente in categorie logiche (come 'Frutta e Verdura', 'Latticini', 'Carne', ecc). Formula la risposta come un elenco ordinato per categorie, con emoji appropriate per ogni categoria. Le risposte devono essere in italiano."
+        }, {
+            "role":
+            "user",
+            "content":
+            f"Ecco la mia lista della spesa: {item_list}. Organizzala in categorie per me."
+        }]
+
         return await self._get_openai_response(messages)
-    
+
     async def answer_question(self, items, question):
         """
         Answer questions about the shopping list.
-        
+
         Args:
             items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
             question: The user's question
-            
+
         Returns:
             A string with the answer
         """
@@ -248,29 +261,38 @@ Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
         if items and isinstance(items, list):
             if isinstance(items[0], dict) and "name" in items[0]:
                 # Format items with quantities for better context
-                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+                formatted_items = [
+                    f"{item['name']} ({item['quantity']})" for item in items
+                ]
             else:
                 # Already a list of strings
                 formatted_items = items
         else:
             formatted_items = []
-        
+
         item_list = ", ".join(formatted_items)
-        
-        messages = [
-            {"role": "system", "content": "Sei un assistente italiano esperto in spesa e cucina. Rispondi alle domande dell'utente riguardo la sua lista della spesa. Fornisci informazioni utili, consigli e suggerimenti. Le risposte devono essere dettagliate ma concise, in italiano e con un tono amichevole."},
-            {"role": "user", "content": f"La mia lista della spesa contiene: {item_list}. La mia domanda è: {question}"}
-        ]
-        
+
+        messages = [{
+            "role":
+            "system",
+            "content":
+            "Sei un assistente italiano esperto in spesa e cucina. Rispondi alle domande dell'utente riguardo la sua lista della spesa. Fornisci informazioni utili, consigli e suggerimenti. Le risposte devono essere dettagliate ma concise, in italiano e con un tono amichevole."
+        }, {
+            "role":
+            "user",
+            "content":
+            f"La mia lista della spesa contiene: {item_list}. La mia domanda è: {question}"
+        }]
+
         return await self._get_openai_response(messages)
-    
+
     async def generate_meal_plan(self, items):
         """
         Generate a meal plan based on the items in the shopping list.
-        
+
         Args:
             items: The current items in the shopping list (list of strings or list of dicts with 'name' and 'quantity')
-            
+
         Returns:
             A string with the meal plan
         """
@@ -278,18 +300,27 @@ Per utilizzare queste funzioni, seleziona uno dei comandi dal menu del bot.
         if items and isinstance(items, list):
             if isinstance(items[0], dict) and "name" in items[0]:
                 # Format items with quantities for better context
-                formatted_items = [f"{item['name']} ({item['quantity']})" for item in items]
+                formatted_items = [
+                    f"{item['name']} ({item['quantity']})" for item in items
+                ]
             else:
                 # Already a list of strings
                 formatted_items = items
         else:
             formatted_items = []
-        
+
         item_list = ", ".join(formatted_items)
-        
-        messages = [
-            {"role": "system", "content": "Sei un assistente italiano esperto in cucina. Devi creare un piano dei pasti per 3 giorni (colazione, pranzo e cena) utilizzando principalmente gli ingredienti disponibili nella lista della spesa dell'utente. Se necessario, puoi suggerire pochi ingredienti aggiuntivi. Le ricette devono essere semplici ma gustose. Organizza il piano in modo chiaro, con emoji appropriate e brevi descrizioni delle ricette. Le risposte devono essere in italiano."},
-            {"role": "user", "content": f"Ecco la mia lista della spesa: {item_list}. Puoi crearmi un piano dei pasti per 3 giorni?"}
-        ]
-        
+
+        messages = [{
+            "role":
+            "system",
+            "content":
+            "Sei un assistente italiano esperto in cucina. Devi creare un piano dei pasti per 3 giorni (colazione, pranzo e cena) utilizzando principalmente gli ingredienti disponibili nella lista della spesa dell'utente. Se necessario, puoi suggerire pochi ingredienti aggiuntivi. Le ricette devono essere semplici ma gustose. Organizza il piano in modo chiaro, con emoji appropriate e brevi descrizioni delle ricette. Le risposte devono essere in italiano."
+        }, {
+            "role":
+            "user",
+            "content":
+            f"Ecco la mia lista della spesa: {item_list}. Puoi crearmi un piano dei pasti per 3 giorni?"
+        }]
+
         return await self._get_openai_response(messages)
