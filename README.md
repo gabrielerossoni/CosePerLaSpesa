@@ -1,45 +1,51 @@
-# Bot Telegram Lista della Spesa
+# Telegram Shopping List Bot
 
-Un bot Telegram in italiano per gestire in modo intelligente le liste della spesa con funzionalità AI.
+Italian Telegram bot for shared shopping lists, item quantities, categorization and optional AI suggestions.
 
-## Funzionalità
-- Gestione completa delle liste della spesa (aggiungere, rimuovere, visualizzare, svuotare)
-- Supporto per le quantità dei prodotti
-- Categorizzazione automatica degli articoli
-- Suggerimenti intelligenti basati sulla lista attuale
-- Generazione di piani pasti
-- Assistenza AI per domande sulla lista
+Repository: **CosePerLaSpesa**. Built with Python, python-telegram-bot, OpenAI and a Flask monitoring interface.
 
-## Comandi
-- `/aggiungi [articolo]` - Aggiungi un articolo alla lista
-- `/lista` - Mostra la tua lista della spesa
-- `/rimuovi [numero]` - Rimuovi un articolo dalla lista
-- `/svuota` - Cancella l'intera lista
-- `/suggerisci` - Ottieni suggerimenti intelligenti
-- `/categorie` - Organizza la lista per categorie
-- `/pasti` - Ottieni un piano dei pasti basato sulla lista
-- `/ai [domanda]` - Fai una domanda sulla tua lista
+## Features
 
-## Tecnologie Utilizzate
-- Python Telegram Bot API
-- OpenAI GPT per funzionalità AI
-- Sistema di fallback multilivello per garantire disponibilità
-- Storage persistente per mantenere le liste tra i riavvii
-- Flask + Gunicorn per l'interfaccia web di monitoraggio
+- Add, list, remove and clear shopping-list items.
+- Keep quantities and group items into categories.
+- Request meal ideas and shopping suggestions.
+- Store lists between restarts; AI helpers include fallback paths.
 
-## Deployment
+## Commands
 
-### Local (Replit)
-Il bot può essere eseguito direttamente su Replit utilizzando il workflow configurato. Assicurati di impostare le variabili d'ambiente:
-- `TELEGRAM_TOKEN`: Il token del tuo bot Telegram
-- `OPENAI_API_KEY`: La tua chiave API OpenAI
+| Command | Purpose |
+| --- | --- |
+| `/aggiungi articolo` | Add an item |
+| `/lista` | Show the list |
+| `/rimuovi numero` | Remove an item |
+| `/svuota` | Clear the list |
+| `/categorie` | Group items by category |
+| `/suggerisci` | Request suggestions |
+| `/pasti` | Request meal ideas |
+| `/ai domanda` | Ask the assistant |
 
-### Railway (24/7 Hosting)
-Per un hosting continuo anche quando il PC è spento, segui le istruzioni nel file `railway-deploy.md` per deployare su Railway.
+## Setup and deployment
 
-1. Push del codice su GitHub (già configurato con repository: `https://github.com/gabrielerossoni/CosePerLaSpesa`)
-2. Connessione del repository a Railway
-3. Configurazione delle variabili d'ambiente
-4. Deploy automatico
+Use Python 3.11 or later, as declared in [pyproject.toml](pyproject.toml). The repository includes [uv.lock](uv.lock):
 
-Per istruzioni dettagliate, vedi il file `railway-deploy.md`.
+```sh
+git clone https://github.com/gabrielerossoni/CosePerLaSpesa.git
+cd CosePerLaSpesa
+uv sync
+```
+
+Configure `TELEGRAM_TOKEN` and `OPENAI_API_KEY` in the hosting environment or your local environment. Never commit actual tokens.
+
+[Procfile](Procfile) defines the service entry point. Follow [railway-deploy.md](railway-deploy.md) for Railway or [replit.md](replit.md) for the existing Replit setup. Hosting-specific instructions are separate from bot commands.
+
+## Repository guide
+
+- [telegram_bot.py](telegram_bot.py): Telegram interactions.
+- [shopping_list.py](shopping_list.py) and [storage.py](storage.py): list management and persistence.
+- [ai_assistant.py](ai_assistant.py) and [ai_fallback.py](ai_fallback.py): AI integration.
+- [main.py](main.py), [bot_runner.py](bot_runner.py), [templates/](templates/): service and monitoring.
+- [test_openai.py](test_openai.py): integration-oriented script; review required credentials and API costs before running.
+
+## Data and project status
+
+This is an existing personal project, not a hosted-service availability guarantee. Local list storage may contain user data; use fictional data for examples and screenshots. The repository currently has no project-wide license file granting reuse rights.
